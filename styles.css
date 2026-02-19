@@ -1,0 +1,634 @@
+/* ================================================
+   WEKO Service Portal — Styles
+   ================================================ */
+
+/* === CSS Variables === */
+:root {
+  --indigo: #6366f1;
+  --purple: #8b5cf6;
+  --indigo-dark: #4f46e5;
+  --indigo-darker: #312e81;
+  --emerald: #10b981;
+  --glass-bg: rgba(15, 23, 42, 0.88);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === Global === */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f1f5f9 100%);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* === Number Input Spinners === */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* === Glass Card === */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* === Part Cards === */
+.part-card {
+  transition: all var(--transition-fast);
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (hover: hover) {
+  .part-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+}
+.part-card:active {
+  transform: scale(0.98);
+}
+.part-card:has(input:checked) {
+  border-color: var(--indigo);
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.15),
+    0 4px 12px rgba(99, 102, 241, 0.1);
+}
+.part-card:has(input:checked) .part-price {
+  color: var(--indigo-dark);
+  font-weight: 700;
+}
+.part-card:has(input:checked) .part-title {
+  color: var(--indigo-darker);
+}
+
+/* === Autocomplete Dropdown === */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 0.75rem;
+  margin-top: 0.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  max-height: 180px;
+  overflow-y: auto;
+  animation: calSlideDown var(--transition-fast) ease;
+}
+.autocomplete-dropdown.hidden { display: none; }
+.autocomplete-item {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: #334155;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 0.15s;
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover,
+.autocomplete-item.focused {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--indigo);
+}
+.autocomplete-item .ac-meta {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-left: 0.5rem;
+}
+
+/* === Parts Filter Tabs (light theme) === */
+.parts-filter-tab {
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  color: rgba(100, 116, 139, 0.6);
+  background: transparent;
+}
+.parts-filter-tab:hover {
+  color: rgba(100, 116, 139, 1);
+  background: rgba(99, 102, 241, 0.06);
+}
+.parts-filter-tab.active {
+  color: var(--indigo);
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+/* === Favorite Star Button === */
+.fav-star {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+.fav-star:hover {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  transform: scale(1.15);
+}
+.fav-star:active {
+  transform: scale(0.9);
+}
+.fav-star.active {
+  color: #f59e0b;
+}
+.fav-star.active:hover {
+  color: #d97706;
+}
+
+/* === Custom Checkbox === */
+.custom-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+.custom-check:checked {
+  background: linear-gradient(135deg, var(--indigo), var(--purple));
+  border-color: transparent;
+}
+.custom-check:checked::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.custom-check:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+/* === Delivery Toggle === */
+.delivery-toggle {
+  transition: all 0.25s ease;
+}
+.delivery-toggle:has(input:checked) {
+  border-color: var(--indigo);
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+}
+
+/* === Buttons === */
+.btn-press {
+  transition: all var(--transition-fast);
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* === Search Clear === */
+.search-clear {
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.search-clear.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* === Animations === */
+@keyframes pulseSoft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.total-updating {
+  animation: pulseSoft 0.35s ease;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.history-item-new {
+  animation: fadeSlideIn 0.3s ease forwards;
+}
+
+@keyframes spinIn {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+/* === Summary Panel — Mobile Bottom Sheet === */
+@media (max-width: 1023px) {
+  .summary-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    border-radius: 1.25rem 1.25rem 0 0;
+    max-height: 88vh;
+    overflow-y: auto;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .summary-panel.collapsed {
+    transform: translateY(calc(100% - 76px));
+  }
+  .summary-panel.collapsed .summary-body {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+  .summary-body {
+    transition: opacity 0.25s ease 0.1s;
+  }
+  .summary-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 40;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-smooth);
+  }
+  .summary-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  body {
+    padding-bottom: 86px;
+  }
+}
+@media (min-width: 1024px) {
+  .summary-backdrop {
+    display: none !important;
+  }
+}
+
+/* === History Items (inside dark panel) === */
+.history-item {
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(255, 255, 255, 0.03);
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (hover: hover) {
+  .history-item:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.25);
+  }
+}
+.history-item:active {
+  transform: scale(0.98);
+  background: rgba(99, 102, 241, 0.18);
+}
+
+/* === History Filter Tabs === */
+.filter-tab {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  color: rgba(148, 163, 184, 0.7);
+  background: transparent;
+}
+.filter-tab:hover {
+  color: rgba(148, 163, 184, 1);
+  background: rgba(255, 255, 255, 0.05);
+}
+.filter-tab.active {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Date picker in dark panel */
+input[type="date"]#historyDatePicker {
+  color-scheme: dark;
+  max-width: 130px;
+}
+
+/* === Custom Calendar Widget === */
+.calendar-widget {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  animation: calSlideDown 0.25s ease forwards;
+}
+.calendar-widget.hidden {
+  display: none;
+}
+@keyframes calSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Calendar header: arrows + month label */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.cal-header .cal-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+.cal-header button {
+  width: 26px;
+  height: 26px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.65rem;
+}
+.cal-header button:hover {
+  background: rgba(99,102,241,0.15);
+  color: #a5b4fc;
+  border-color: rgba(99,102,241,0.2);
+}
+.cal-header button:active {
+  transform: scale(0.92);
+}
+
+/* Day-of-week labels */
+.cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  margin-bottom: 4px;
+}
+.cal-dow span {
+  text-align: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 0;
+}
+
+/* Day grid */
+.cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #94a3b8;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+}
+.cal-day:hover {
+  background: rgba(99,102,241,0.12);
+  color: #c7d2fe;
+}
+.cal-day:active {
+  transform: scale(0.88);
+}
+.cal-day.other-month {
+  color: rgba(100, 116, 139, 0.3);
+}
+.cal-day.other-month:hover {
+  color: rgba(100, 116, 139, 0.6);
+  background: rgba(255,255,255,0.03);
+}
+.cal-day.today {
+  color: #a5b4fc;
+  border-color: rgba(99,102,241,0.3);
+  background: rgba(99,102,241,0.08);
+}
+.cal-day.selected {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.35);
+  font-weight: 800;
+}
+.cal-day.selected:hover {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  color: white;
+}
+
+/* === Detail Modal === */
+.detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-smooth);
+}
+.detail-modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.detail-modal {
+  position: fixed;
+  z-index: 110;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  width: calc(100% - 1.5rem);
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: all var(--transition-smooth);
+  overscroll-behavior: contain;
+}
+.detail-modal.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* === Edit Modal (parts selection) === */
+.edit-modal {
+  position: fixed;
+  z-index: 120;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  width: calc(100% - 1.5rem);
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: all var(--transition-smooth);
+  overscroll-behavior: contain;
+}
+.edit-modal.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+.edit-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-smooth);
+}
+.edit-modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Edit part card */
+.edit-part-card {
+  transition: all 0.15s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.edit-part-card:has(input:checked) {
+  border-color: var(--indigo);
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+}
+.edit-part-card:active {
+  transform: scale(0.98);
+}
+
+/* === Divider === */
+.divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(51, 65, 85, 0.4),
+    transparent
+  );
+}
+
+/* === Safe area for notched phones === */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .summary-panel {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* === iOS input fix === */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

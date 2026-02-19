@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="WEKO Service — портал генерации счетов для сервисного обслуживания электровелосипедов">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>WEKO Service</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+    </script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="font-sans text-slate-800 p-3 sm:p-5 md:p-8">
+
+<!-- Mobile summary backdrop -->
+<div id="summaryBackdrop" class="summary-backdrop" onclick="toggleSummary()"></div>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div id="detailBackdrop" class="detail-modal-backdrop" onclick="closeDetail()"></div>
+<div id="detailModal" class="detail-modal">
+    <div class="p-5 sm:p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-sm shadow-md">
+                    <i class="fa-solid fa-file-invoice"></i>
+                </div>
+                <div>
+                    <h3 id="detailBikeTitle" class="text-lg font-extrabold text-slate-900"></h3>
+                    <p id="detailDate" class="text-xs text-slate-400 font-medium"></p>
+                </div>
+            </div>
+            <button onclick="closeDetail()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <div class="bg-slate-50 rounded-xl p-4">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Клиент</p>
+                <p id="detailClient" class="text-sm font-semibold text-slate-800"></p>
+            </div>
+            <div class="grid grid-cols-3 gap-2.5">
+                <div class="bg-slate-50 rounded-xl p-3 text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Доставка</p>
+                    <p id="detailDelivery" class="text-sm font-bold text-slate-700 font-mono"></p>
+                </div>
+                <div class="bg-emerald-50 rounded-xl p-3 text-center">
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Ремонт</p>
+                    <p id="detailRepair" class="text-sm font-bold text-emerald-600 font-mono"></p>
+                </div>
+                <div class="bg-indigo-50 rounded-xl p-3 text-center">
+                    <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Итого</p>
+                    <p id="detailTotal" class="text-sm font-bold text-indigo-600 font-mono"></p>
+                </div>
+            </div>
+            <div id="detailPartsBlock" class="bg-slate-50 rounded-xl p-4">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Детали</p>
+                <div id="detailParts" class="space-y-1 text-sm text-slate-600"></div>
+            </div>
+        </div>
+
+        <div class="mt-5 space-y-2.5">
+            <button onclick="copyHistoryItem()" id="detailCopyBtn"
+                class="btn-press w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-300 flex justify-center items-center gap-2.5 text-sm">
+                <i class="fa-regular fa-copy"></i> Скопировать для Андрея
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="openEditModal()" id="detailEditBtn"
+                    class="btn-press bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 font-medium py-2.5 px-3 rounded-xl transition-all duration-300 flex justify-center items-center gap-1.5 text-xs border border-amber-500/15">
+                    <i class="fa-solid fa-pen-to-square text-[10px]"></i> Редактировать
+                </button>
+                <button onclick="deleteHistoryItem()" id="detailDeleteBtn"
+                    class="btn-press bg-red-500/10 hover:bg-red-500/20 text-red-500 font-medium py-2.5 px-3 rounded-xl transition-all duration-300 flex justify-center items-center gap-1.5 text-xs border border-red-500/10">
+                    <i class="fa-solid fa-trash-can text-[10px]"></i> Удалить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== EDIT MODAL ===== -->
+<div id="editBackdrop" class="edit-modal-backdrop" onclick="closeEditModal()"></div>
+<div id="editModal" class="edit-modal">
+    <div class="p-5 sm:p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center text-white text-xs shadow-md">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900">Редактирование</h3>
+                    <p class="text-[10px] text-slate-400 font-semibold">Измените детали и сохраните</p>
+                </div>
+            </div>
+            <button onclick="closeEditModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Edit totals bar -->
+        <div class="flex items-center justify-between bg-slate-50 rounded-xl p-3 mb-4">
+            <span id="editPartsCount" class="text-xs font-bold text-slate-500">0 дет.</span>
+            <div class="flex items-center gap-4 text-right">
+                <div>
+                    <p class="text-[9px] text-slate-400 uppercase font-bold">Ремонт</p>
+                    <p id="editRepairTotal" class="text-sm font-bold text-emerald-600 font-mono">0 ₽</p>
+                </div>
+                <div>
+                    <p class="text-[9px] text-indigo-500 uppercase font-bold">Итого</p>
+                    <p id="editTotal" class="text-sm font-extrabold text-indigo-600 font-mono">0 ₽</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parts checkboxes for editing -->
+        <div id="editPartsList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1 mb-4"></div>
+
+        <button onclick="saveEdit()" id="editSaveBtn"
+            class="btn-press w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-amber-500/25 transition-all duration-300 flex justify-center items-center gap-2.5 text-sm">
+            <i class="fa-solid fa-check"></i> Сохранить изменения
+        </button>
+    </div>
+</div>
+
+<!-- ===== MAIN GRID ===== -->
+<div class="mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+
+    <!-- ===== LEFT: FORM (3 cols) ===== -->
+    <div class="lg:col-span-3 space-y-4 sm:space-y-5">
+
+        <!-- Header -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-white/60 p-4 sm:p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+                        <i class="fa-solid fa-bolt text-lg sm:text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight tracking-tight">WEKO Service</h1>
+                        <p class="text-[10px] sm:text-xs text-slate-400 font-semibold tracking-widest uppercase">Генерация счетов</p>
+                    </div>
+                </div>
+                <button onclick="resetForm()" class="btn-press text-xs sm:text-sm font-semibold text-red-500 hover:text-white bg-red-50 hover:bg-red-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-arrow-rotate-left text-xs"></i>
+                    <span class="hidden sm:inline">Сброс</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Client Info -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-white/60 p-4 sm:p-6">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-user text-indigo-400"></i> Данные клиента
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div class="sm:col-span-2 lg:col-span-1 relative">
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-1">ФИО Клиента</label>
+                    <input type="text" id="clientName" autocomplete="off" class="w-full bg-slate-50/80 border border-slate-200/80 rounded-xl px-4 py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all placeholder:text-slate-300" placeholder="Иванов И.И.">
+                    <div id="clientSuggestions" class="autocomplete-dropdown hidden"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-1">Номер ренты</label>
+                    <input type="number" id="rentNumber" inputmode="numeric" enterkeyhint="next" autocomplete="off" class="w-full bg-slate-50/80 border border-slate-200/80 rounded-xl px-4 py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all text-center font-semibold placeholder:text-slate-300" placeholder="378">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5 ml-1">Велосипед</label>
+                    <div class="flex items-center">
+                        <span class="bg-gradient-to-b from-slate-100 to-slate-200 border border-slate-200/80 border-r-0 rounded-l-xl px-3 sm:px-4 py-3 text-slate-500 font-bold text-sm select-none">РА</span>
+                        <input type="number" id="bikeNumber" inputmode="numeric" enterkeyhint="done" autocomplete="off" class="w-full bg-slate-50/80 border-y border-slate-200/80 px-2 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all text-center font-bold text-base sm:text-lg placeholder:text-slate-300 placeholder:font-normal" placeholder="213">
+                        <span class="bg-gradient-to-b from-slate-100 to-slate-200 border border-slate-200/80 border-l-0 rounded-r-xl px-3 sm:px-4 py-3 text-slate-500 font-bold text-sm select-none">С</span>
+                    </div>
+                </div>
+            </div>
+            <label class="delivery-toggle flex items-center gap-3 p-3 sm:p-4 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50/80 mt-4">
+                <input type="checkbox" id="needDelivery" class="custom-check" checked>
+                <div class="min-w-0">
+                    <div class="font-semibold text-slate-800 text-sm sm:text-base">Платная доставка <span class="text-indigo-500 font-bold">1 800 ₽</span></div>
+                    <div class="text-xs sm:text-sm text-slate-400 truncate">Снимите галочку, если выезд по гарантии</div>
+                </div>
+            </label>
+        </div>
+
+        <!-- Parts -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-white/60 p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fa-solid fa-wrench text-indigo-400"></i> Дефектовка
+                        <span id="selectedCount" class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-600 min-w-[22px] opacity-0 transition-opacity">0</span>
+                    </h2>
+                    <div class="flex gap-1">
+                        <button class="parts-filter-tab active" data-parts-filter="all">Все</button>
+                        <button class="parts-filter-tab" data-parts-filter="fav"><i class="fa-solid fa-star text-[8px] mr-0.5"></i>Избранные <span id="favCount" class="inline-flex items-center justify-center px-1 rounded-full text-[9px] font-bold bg-amber-100 text-amber-600 min-w-[14px] opacity-0 transition-opacity ml-0.5">0</span></button>
+                    </div>
+                </div>
+                <div class="relative w-full sm:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-300 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="filterParts()" class="w-full text-sm bg-slate-50/80 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all placeholder:text-slate-300" placeholder="Поиск детали...">
+                    <button onclick="clearSearch()" id="searchClearBtn" class="search-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-300 hover:text-slate-500 transition">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="partsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 max-h-[50vh] sm:max-h-[400px] overflow-y-auto pr-1 sm:pr-2 pt-1"></div>
+            <div id="noResults" class="hidden text-center py-12 text-slate-300">
+                <i class="fa-solid fa-search text-4xl mb-3"></i>
+                <p class="text-sm font-medium">Ничего не найдено</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT: SUMMARY + HISTORY ===== -->
+    <div id="summaryPanel" class="summary-panel glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-white flex flex-col lg:h-fit lg:sticky lg:top-6 collapsed">
+
+        <!-- Mobile Handle -->
+        <div class="lg:hidden flex flex-col items-center cursor-pointer -mt-1 mb-2" onclick="toggleSummary()">
+            <div class="w-10 h-1 bg-slate-500 rounded-full mb-3"></div>
+            <div class="flex items-center justify-between w-full">
+                <span class="text-sm font-semibold text-slate-300">Итого</span>
+                <span id="displayTotalMobile" class="text-xl font-extrabold text-indigo-400 font-mono tracking-tight">1 800 ₽</span>
+            </div>
+        </div>
+
+        <div class="summary-body">
+            <!-- === ESTIMATE === -->
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-receipt text-indigo-400"></i> Смета счета
+            </h2>
+
+            <div class="space-y-2.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Доставка</span>
+                    <span id="displayDelivery" class="font-mono text-base font-semibold text-slate-200">1 800 ₽</span>
+                </div>
+                <div class="divider"></div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Ремонт</span>
+                    <span id="displayRepair" class="font-mono text-base font-semibold text-emerald-400">0 ₽</span>
+                </div>
+                <div class="divider"></div>
+                <div class="flex justify-between items-center pt-1.5">
+                    <span class="text-base font-extrabold text-white">Итого</span>
+                    <span id="displayTotal" class="text-2xl font-extrabold text-indigo-400 font-mono tracking-tight">1 800 ₽</span>
+                </div>
+            </div>
+
+            <!-- Selected Parts -->
+            <div id="selectedPartsList" class="mt-3 hidden">
+                <div class="divider mb-2"></div>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Выбранные детали</p>
+                <div id="selectedPartsContent" class="space-y-0.5 max-h-20 overflow-y-auto text-xs text-slate-400"></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-4 space-y-2">
+                <button onclick="sendToGoogleSheets()" id="sendBtn"
+                    class="btn-press w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-300 flex justify-center items-center gap-2 text-sm">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Внести в Таблицу
+                </button>
+                <button onclick="copyToClipboard()" id="copyBtn"
+                    class="btn-press w-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 border border-white/10 hover:border-white/20 flex justify-center items-center gap-2 text-xs">
+                    <i class="fa-regular fa-copy"></i> Скопировать для Андрея
+                </button>
+            </div>
+
+            <!-- === HISTORY === -->
+            <div class="mt-4">
+                <div class="divider mb-3"></div>
+
+                <!-- History Header -->
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-indigo-400"></i> История
+                        <span id="historyCount" class="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 min-w-[20px] opacity-0 transition-opacity">0</span>
+                    </h2>
+                    <button onclick="clearHistory()" id="clearHistoryBtn" class="hidden text-[10px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded-lg transition-all">
+                        Очистить
+                    </button>
+                </div>
+
+                <!-- History Search -->
+                <div class="relative mb-2">
+                    <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
+                    <input type="text" id="historySearch" oninput="onHistorySearch()"
+                        class="w-full text-xs bg-white/5 border border-white/8 rounded-lg pl-7 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500/40 focus:border-indigo-400/30 transition-all placeholder:text-slate-600 text-slate-300"
+                        placeholder="Номер, имя или деталь...">
+                </div>
+
+                <!-- Date Filter Tabs -->
+                <div class="flex gap-1 mb-2 overflow-x-auto pb-1">
+                    <button class="filter-tab active" data-filter="all">Все</button>
+                    <button class="filter-tab" data-filter="today">Сегодня</button>
+                    <button class="filter-tab" data-filter="week">Неделя</button>
+                    <button class="filter-tab" data-filter="month">Месяц</button>
+                    <button class="filter-tab" data-filter="exact"><i class="fa-regular fa-calendar-days mr-1"></i>Дата</button>
+                </div>
+
+                <!-- Custom Calendar Picker -->
+                <div id="calendarWidget" class="calendar-widget hidden"></div>
+
+                <!-- History List -->
+                <div id="historyList" class="space-y-1.5 max-h-[250px] overflow-y-auto pr-0.5">
+                    <div id="historyEmpty" class="text-center py-4">
+                        <i class="fa-solid fa-inbox text-xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-500">Генерации появятся здесь</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <textarea id="hiddenClipboard" style="position:absolute;left:-9999px"></textarea>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
