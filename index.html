@@ -21,7 +21,7 @@
     </script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="font-sans text-slate-800 p-3 sm:p-5 md:p-8">
+<body class="font-sans text-slate-800 p-3 sm:p-5 md:p-6 lg:p-8">
 
 <!-- Mobile summary backdrop -->
 <div id="summaryBackdrop" class="summary-backdrop" onclick="toggleSummary()"></div>
@@ -134,10 +134,10 @@
 </div>
 
 <!-- ===== MAIN GRID ===== -->
-<div class="mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+<div class="mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
 
     <!-- ===== LEFT: FORM (3 cols) ===== -->
-    <div class="lg:col-span-3 space-y-4 sm:space-y-5">
+    <div class="md:col-span-2 lg:col-span-3 space-y-4 sm:space-y-5">
 
         <!-- Header -->
         <div class="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-sm border border-white/60 p-4 sm:p-6">
@@ -221,10 +221,10 @@
     </div>
 
     <!-- ===== RIGHT: SUMMARY + HISTORY ===== -->
-    <div id="summaryPanel" class="summary-panel glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-white flex flex-col lg:h-fit lg:sticky lg:top-6 collapsed">
+    <div id="summaryPanel" class="summary-panel glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 text-white flex flex-col md:h-fit md:sticky md:top-6 collapsed">
 
         <!-- Mobile Handle -->
-        <div class="lg:hidden flex flex-col items-center cursor-pointer -mt-1 mb-2" onclick="toggleSummary()">
+        <div class="md:hidden flex flex-col items-center cursor-pointer -mt-1 mb-2" onclick="toggleSummary()">
             <div class="w-10 h-1 bg-slate-500 rounded-full mb-3"></div>
             <div class="flex items-center justify-between w-full">
                 <span class="text-sm font-semibold text-slate-300">Итого</span>

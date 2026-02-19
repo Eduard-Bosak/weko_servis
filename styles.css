@@ -288,7 +288,7 @@ input[type="number"] {
 }
 
 /* === Summary Panel — Mobile Bottom Sheet === */
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
   .summary-panel {
     position: fixed;
     bottom: 0;
@@ -329,7 +329,7 @@ input[type="number"] {
     padding-bottom: 86px;
   }
 }
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .summary-backdrop {
     display: none !important;
   }
