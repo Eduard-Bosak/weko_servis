@@ -312,27 +312,34 @@ function showSuggestions() {
 function selectSuggestion(name) {
   _refs.clientName.value = name;
   $("clientSuggestions").classList.add("hidden");
-  _refs.clientName.blur();
+  // CONVEYOR: Move to next field
+  _refs.rentNumber.focus();
 }
 
 function handleAcKeydown(e) {
   const dropdown = $("clientSuggestions");
-  if (dropdown.classList.contains("hidden")) return;
+  const hasItems = !dropdown.classList.contains("hidden") && dropdown.querySelectorAll(".autocomplete-item").length > 0;
 
-  const items = dropdown.querySelectorAll(".autocomplete-item");
-  if (items.length === 0) return;
-
-  if (e.key === "ArrowDown") {
+  if (e.key === "ArrowDown" && hasItems) {
     e.preventDefault();
+    const items = dropdown.querySelectorAll(".autocomplete-item");
     acFocusIdx = Math.min(acFocusIdx + 1, items.length - 1);
     items.forEach((el, i) => el.classList.toggle("focused", i === acFocusIdx));
-  } else if (e.key === "ArrowUp") {
+  } else if (e.key === "ArrowUp" && hasItems) {
     e.preventDefault();
+    const items = dropdown.querySelectorAll(".autocomplete-item");
     acFocusIdx = Math.max(acFocusIdx - 1, 0);
     items.forEach((el, i) => el.classList.toggle("focused", i === acFocusIdx));
-  } else if (e.key === "Enter" && acFocusIdx >= 0) {
+  } else if (e.key === "Enter") {
     e.preventDefault();
-    selectSuggestion(items[acFocusIdx].dataset.name);
+    if (hasItems && acFocusIdx >= 0) {
+      const items = dropdown.querySelectorAll(".autocomplete-item");
+      selectSuggestion(items[acFocusIdx].dataset.name);
+    } else {
+      // CONVEYOR: Enter moves to next field if no suggestion selected
+      $("clientSuggestions").classList.add("hidden");
+      _refs.rentNumber.focus();
+    }
   } else if (e.key === "Escape") {
     dropdown.classList.add("hidden");
   }
@@ -1144,6 +1151,22 @@ function initEvents() {
   _refs.clientName.addEventListener("keydown", handleAcKeydown);
   _refs.clientName.addEventListener("blur", () => {
     setTimeout(() => $("clientSuggestions").classList.add("hidden"), 150);
+  });
+
+  // CONVEYOR: Rent Number -> Bike Number
+  _refs.rentNumber.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      _refs.bikeNumber.focus();
+    }
+  });
+
+  // CONVEYOR: Bike Number -> Done (Blur)
+  _refs.bikeNumber.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      _refs.bikeNumber.blur();
+    }
   });
 }
 
