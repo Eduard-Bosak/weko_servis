@@ -4,7 +4,7 @@ const STATIC_ASSETS = [
     './',
     'index.html',
     'styles.css',
-    'app.js',
+    'dist/app.js',
     'manifest.json'
 ];
 const CDN_ASSETS = [
