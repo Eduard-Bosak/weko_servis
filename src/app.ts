@@ -1030,7 +1030,7 @@ function calNextMonth() {
 function calSelectDay(dateStr: string) {
   historyExactDate = dateStr;
   renderCalendar();
-  renderHistory(false);
+  setDateFilter("exact");
 }
 
 // ================================================

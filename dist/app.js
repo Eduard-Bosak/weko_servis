@@ -835,7 +835,7 @@ function calNextMonth() {
 function calSelectDay(dateStr) {
     historyExactDate = dateStr;
     renderCalendar();
-    renderHistory(false);
+    setDateFilter("exact");
 }
 function renderHistory(isNew) {
     const list = _refs.historyList;
