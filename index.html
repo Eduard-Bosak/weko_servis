@@ -147,7 +147,13 @@
                         <i class="fa-solid fa-bolt text-lg sm:text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight tracking-tight">WEKO Service</h1>
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight tracking-tight">WEKO Service</h1>
+                            <div class="flex items-center gap-1.5 bg-white shadow-sm border border-slate-200 px-2 py-1 rounded-lg">
+                                <div id="offlineStatus" class="hidden text-slate-400 hint-bounce transition-all duration-300" title="Ожидание синхронизации"><i class="fa-solid fa-cloud"></i></div>
+                                <div id="networkStability" class="text-[10px] sm:text-xs font-bold text-emerald-500" title="Стабильность сети">100%</div>
+                            </div>
+                        </div>
                         <p class="text-[10px] sm:text-xs text-slate-400 font-semibold tracking-widest uppercase">Генерация счетов</p>
                     </div>
                 </div>
@@ -206,7 +212,7 @@
                 </div>
                 <div class="relative w-full sm:w-64">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-300 text-sm"></i>
-                    <input type="text" id="searchInput" oninput="filterParts()" class="w-full text-sm bg-slate-50/80 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all placeholder:text-slate-300" placeholder="Поиск детали...">
+                    <input type="text" id="searchInput" class="w-full text-sm bg-slate-50/80 border border-slate-200/80 rounded-xl pl-9 pr-9 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all placeholder:text-slate-300" placeholder="Поиск детали...">
                     <button onclick="clearSearch()" id="searchClearBtn" class="search-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-300 hover:text-slate-500 transition">
                         <i class="fa-solid fa-xmark text-sm"></i>
                     </button>
@@ -292,7 +298,7 @@
                 <!-- History Search -->
                 <div class="relative mb-2">
                     <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
-                    <input type="text" id="historySearch" oninput="onHistorySearch()"
+                    <input type="text" id="historySearch"
                         class="w-full text-xs bg-white/5 border border-white/8 rounded-lg pl-7 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500/40 focus:border-indigo-400/30 transition-all placeholder:text-slate-600 text-slate-300"
                         placeholder="Номер, имя или деталь...">
                 </div>

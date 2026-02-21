@@ -6,6 +6,7 @@
 const GOOGLE_SHEET_URL =
   "https://script.google.com/macros/s/AKfycbwGJVbD34Rkt1uz2x5Nu4riKDNmHTlAGmhbJle0DmGbqwuEsL3S9Ra6qGo23Hi1pBXMyw/exec";
 const HISTORY_KEY = "weko_history";
+const SYNC_QUEUE_KEY = "weko_sync_queue";
 const MAX_HISTORY = 200;
 
 // === INTERFACES ===
@@ -25,6 +26,13 @@ interface HistoryItem {
   total: number;
   selectedParts?: string[];
   textToCopy?: string;
+}
+
+interface SyncAction {
+  id: string;
+  action: "create" | "update" | "saveSettings";
+  payload: any;
+  timestamp: number;
 }
 
 interface DOMRefs {
@@ -53,6 +61,8 @@ interface DOMRefs {
   clearHistoryBtn: HTMLButtonElement;
   historySearch: HTMLInputElement;
   hiddenClipboard: HTMLTextAreaElement;
+  offlineStatus: HTMLElement;
+  networkStability: HTMLElement;
 }
 
 // === PARTS DATABASE ===
@@ -149,6 +159,8 @@ function initRefs() {
     clearHistoryBtn: $("clearHistoryBtn") as HTMLButtonElement,
     historySearch: $("historySearch") as HTMLInputElement,
     hiddenClipboard: $("hiddenClipboard") as HTMLTextAreaElement,
+    offlineStatus: $("offlineStatus"),
+    networkStability: $("networkStability"),
   };
 }
 
@@ -164,6 +176,15 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// Debounce helper for performance
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+  let timeout: number | undefined;
+  return function(this: any, ...args: Parameters<T>) {
+    clearTimeout(timeout);
+    timeout = window.setTimeout(() => func.apply(this, args), wait);
+  } as T;
+}
+
 // Favorites localStorage
 function getFavorites(): string[] {
   try { return JSON.parse(localStorage.getItem('weko_favorites') || '[]'); }
@@ -176,14 +197,18 @@ function saveFavorites(favs: string[]) {
 }
 
 function syncFavoritesToSheet(favs: string[]) {
+  const payload = { action: "saveSettings", key: "favorites", value: JSON.stringify(favs) };
   try {
+    if (!navigator.onLine) throw new Error("Offline");
     fetch(GOOGLE_SHEET_URL, {
       method: "POST",
       mode: "no-cors",
-      body: JSON.stringify({ action: "saveSettings", key: "favorites", value: JSON.stringify(favs) }),
+      body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain;charset=utf-8" },
     });
-  } catch {}
+  } catch {
+    addToSyncQueue("saveSettings", payload);
+  }
 }
 
 async function loadFavoritesFromSheet(): Promise<void> {
@@ -221,6 +246,141 @@ function toggleFavorite(partName: string): boolean {
 }
 
 // ================================================
+// OFFLINE SYNC QUEUE
+// ================================================
+
+function getSyncQueue(): SyncAction[] {
+  try { return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function setSyncQueue(queue: SyncAction[]) {
+  localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+  updateOfflineStatus();
+}
+
+function addToSyncQueue(action: "create" | "update" | "saveSettings", payload: any) {
+  const queue = getSyncQueue();
+  // If updating or saving settings, replace existing matching action to prevent backlog
+  if (action === "update" || action === "saveSettings") {
+      const existingIdx = queue.findIndex(q => q.action === action && (action === "saveSettings" ? true : q.payload.id === payload.id));
+      if (existingIdx !== -1) {
+          queue[existingIdx].payload = payload;
+          setSyncQueue(queue);
+          return;
+      }
+  }
+  queue.push({ id: generateId(), action, payload, timestamp: Date.now() });
+  setSyncQueue(queue);
+}
+
+function updateOfflineStatus() {
+  if (!_refs.offlineStatus) return;
+  const queue = getSyncQueue();
+  
+  if (queue.length > 0) {
+    _refs.offlineStatus.classList.remove("hidden");
+    _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
+    _refs.offlineStatus.title = `Ожидание сети: ${queue.length} зап.`;
+    _refs.offlineStatus.className = "text-amber-500 hint-bounce transition-all duration-300";
+  } else if (!navigator.onLine) {
+    _refs.offlineStatus.classList.remove("hidden");
+    _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-cloud-bolt"></i>';
+    _refs.offlineStatus.title = "Офлайн-режим";
+    _refs.offlineStatus.className = "text-red-400 hint-bounce transition-all duration-300";
+  } else {
+    // Online and empty queue
+    if (!_refs.offlineStatus.classList.contains("hidden") && _refs.offlineStatus.classList.contains("text-amber-500")) {
+        _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-check-circle"></i>';
+        _refs.offlineStatus.className = "text-emerald-500 transition-all duration-300";
+        setTimeout(() => _refs.offlineStatus.classList.add("hidden"), 2500);
+    } else {
+        _refs.offlineStatus.classList.add("hidden");
+    }
+  }
+}
+
+function updateNetworkStability() {
+  const el = _refs.networkStability;
+  if (!el) return;
+
+  if (!navigator.onLine) {
+    el.textContent = "0%";
+    el.className = "text-[10px] sm:text-xs font-bold text-red-500 transition-colors";
+    return;
+  }
+
+  let stability = 100;
+  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+
+  if (conn) {
+    if (conn.rtt !== undefined) {
+      if (conn.rtt <= 50) stability = 100;
+      else if (conn.rtt <= 100) stability = 100 - Math.floor((conn.rtt - 50) / 5);
+      else if (conn.rtt <= 200) stability = 90 - Math.floor((conn.rtt - 100) / 10);
+      else if (conn.rtt <= 500) stability = 80 - Math.floor((conn.rtt - 200) / 10);
+      else stability = Math.max(5, 50 - Math.floor((conn.rtt - 500) / 20));
+    } else if (conn.downlink !== undefined) {
+      if (conn.downlink >= 5) stability = 100;
+      else if (conn.downlink >= 2) stability = 90;
+      else if (conn.downlink >= 1) stability = 70;
+      else if (conn.downlink >= 0.5) stability = 50;
+      else stability = 20;
+    }
+  }
+
+  el.textContent = `${stability}%`;
+
+  if (stability >= 80) {
+    el.className = "text-[10px] sm:text-xs font-bold text-emerald-500 transition-colors";
+  } else if (stability >= 40) {
+    el.className = "text-[10px] sm:text-xs font-bold text-amber-500 transition-colors";
+  } else {
+    el.className = "text-[10px] sm:text-xs font-bold text-red-500 transition-colors";
+  }
+}
+
+let isSyncing = false;
+async function processSyncQueue() {
+  if (!navigator.onLine || isSyncing) {
+      updateOfflineStatus();
+      return;
+  }
+  const queue = getSyncQueue();
+  if (queue.length === 0) {
+      updateOfflineStatus();
+      return;
+  }
+  
+  isSyncing = true;
+  if (_refs.offlineStatus) {
+      _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i>';
+  }
+  
+  const remainingQueue = [...queue];
+  for (const item of queue) {
+    try {
+      await fetch(GOOGLE_SHEET_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(item.payload),
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+      });
+      // Success, remove from remaining queue
+      const idx = remainingQueue.findIndex(q => q.id === item.id);
+      if (idx !== -1) remainingQueue.splice(idx, 1);
+    } catch {
+      // Stop syncing on first network failure to preserve order
+      break;
+    }
+  }
+  
+  setSyncQueue(remainingQueue);
+  isSyncing = false;
+  updateOfflineStatus();
+}
+
+// ================================================
 // PARTS RENDERING
 // ================================================
 
@@ -242,8 +402,7 @@ function renderParts() {
                 <i class="fa-${starActive ? 'solid' : 'regular'} fa-star"></i>
             </button>
         `;
-    const inputEl = label.querySelector("input");
-    if (inputEl) inputEl.addEventListener("change", updateTotals);
+    // Event delegation is now handled in initEvents() on partsContainer instead of per-checkbox listener
     frag.appendChild(label);
   });
   _refs.partsContainer.appendChild(frag);
@@ -538,79 +697,82 @@ async function sendToGoogleSheets() {
 
   const data = getInvoiceData();
   const id = generateId();
+  const payload = { action: "create", id, ...data };
 
   try {
+    if (!navigator.onLine) throw new Error("Offline");
     await fetch(GOOGLE_SHEET_URL, {
       method: "POST",
       mode: "no-cors",
-      body: JSON.stringify({ action: "create", id, ...data }),
+      body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain;charset=utf-8" },
     });
+  } catch (error) {
+    // Queue for sync when online
+    addToSyncQueue("create", payload);
+  }
+    
+  // Always save locally immediately
+  saveToHistory({ id, ...data });
 
-    saveToHistory({ id, ...data });
+  const isOfflineSave = !navigator.onLine || getSyncQueue().some(q => q.payload.id === id);
+  btn.innerHTML = isOfflineSave ? '<i class="fa-solid fa-cloud-arrow-up"></i> В очереди!' : '<i class="fa-solid fa-check"></i> Успешно!';
+  btn.style.opacity = "1";
+  btn.className = btn.className
+    .replace(
+      "from-indigo-600 to-purple-600",
+      isOfflineSave ? "from-amber-500 to-orange-500" : "from-emerald-500 to-emerald-600",
+    )
+    .replace(
+      "hover:from-indigo-500 hover:to-purple-500",
+      isOfflineSave ? "hover:from-amber-400 hover:to-orange-400" : "hover:from-emerald-400 hover:to-emerald-500",
+    );
 
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> Успешно!';
-    btn.style.opacity = "1";
+  setTimeout(() => {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
     btn.className = btn.className
       .replace(
-        "from-indigo-600 to-purple-600",
         "from-emerald-500 to-emerald-600",
+        "from-indigo-600 to-purple-600",
       )
       .replace(
-        "hover:from-indigo-500 hover:to-purple-500",
-        "hover:from-emerald-400 hover:to-emerald-500",
-      );
-
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-      btn.className = btn.className
-        .replace(
-          "from-emerald-500 to-emerald-600",
+          "from-amber-500 to-orange-500",
           "from-indigo-600 to-purple-600",
-        )
-        .replace(
-          "hover:from-emerald-400 hover:to-emerald-500",
+      )
+      .replace(
+        "hover:from-emerald-400 hover:to-emerald-500",
+        "hover:from-indigo-500 hover:to-purple-500",
+      )
+      .replace(
+          "hover:from-amber-400 hover:to-orange-400",
           "hover:from-indigo-500 hover:to-purple-500",
-        );
-    }, 2000);
-  } catch (error) {
-    btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Ошибка!';
-    btn.style.opacity = "1";
-    btn.className = btn.className.replace(
-      "from-indigo-600 to-purple-600",
-      "from-red-500 to-red-600",
-    );
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-      btn.className = btn.className.replace(
-        "from-red-500 to-red-600",
-        "from-indigo-600 to-purple-600",
       );
-    }, 3000);
-  }
+  }, 2000);
 }
 
 async function updateGoogleSheet(entry: HistoryItem): Promise<boolean> {
+  const payload = {
+    action: "update",
+    id: entry.id,
+    client: entry.client,
+    delivery: entry.delivery,
+    repairTotal: entry.repairTotal,
+    total: entry.total,
+    partsList: (entry.selectedParts || []).join(", "),
+  };
   try {
+    if (!navigator.onLine) throw new Error("Offline");
     await fetch(GOOGLE_SHEET_URL, {
       method: "POST",
       mode: "no-cors",
-      body: JSON.stringify({
-        action: "update",
-        id: entry.id,
-        client: entry.client,
-        delivery: entry.delivery,
-        repairTotal: entry.repairTotal,
-        total: entry.total,
-        partsList: (entry.selectedParts || []).join(", "),
-      }),
+      body: JSON.stringify(payload),
       headers: { "Content-Type": "text/plain;charset=utf-8" },
     });
     return true;
   } catch {
-    return false;
+    addToSyncQueue("update", payload);
+    return true; // Return true as it's saved locally and will sync later
   }
 }
 
@@ -1187,6 +1349,13 @@ function initEvents() {
     }
   });
 
+  // Delegated event for parts checkboxes (Performance Optimization)
+  _refs.partsContainer.addEventListener("change", (e: Event) => {
+    if (e.target && (e.target as HTMLElement).classList.contains("part-checkbox")) {
+      updateTotals();
+    }
+  });
+
   // Delegated event for edit parts checkboxes
   document.addEventListener("change", (e: Event) => {
     if (e.target && (e.target as HTMLElement).classList.contains("edit-part-checkbox")) {
@@ -1213,8 +1382,16 @@ function initEvents() {
     });
   });
 
-  // Client autocomplete
-  _refs.clientName.addEventListener("input", showSuggestions);
+  // Performance Optimization: Debounced Input Listeners
+  const debouncedFilterParts = debounce(filterParts, 150);
+  const debouncedHistorySearch = debounce(onHistorySearch, 200);
+
+  _refs.searchInput.addEventListener("input", debouncedFilterParts);
+  _refs.historySearch.addEventListener("input", debouncedHistorySearch);
+
+  // Client autocomplete (Performance Optimization)
+  const debouncedShowSuggestions = debounce(showSuggestions, 150);
+  _refs.clientName.addEventListener("input", debouncedShowSuggestions);
   _refs.clientName.addEventListener("focus", showSuggestions);
   _refs.clientName.addEventListener("keydown", handleAcKeydown);
   _refs.clientName.addEventListener("blur", () => {
@@ -1236,6 +1413,24 @@ function initEvents() {
       _refs.bikeNumber.blur();
     }
   });
+
+  // Offline Sync Listeners
+  window.addEventListener('online', () => {
+    processSyncQueue();
+    updateNetworkStability();
+  });
+  window.addEventListener('offline', () => {
+    updateOfflineStatus();
+    updateNetworkStability();
+  });
+
+  const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  if (conn) {
+    conn.addEventListener("change", updateNetworkStability);
+  }
+  
+  // Periodically check stability
+  setInterval(updateNetworkStability, 3000);
 }
 
 // ================================================
@@ -1259,5 +1454,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initEvents();
   initServiceWorker();
   updateFavCount();
+  updateOfflineStatus();
+  updateNetworkStability();
+  processSyncQueue();
   loadFavoritesFromSheet(); // Sync favorites from Google Sheets
 });

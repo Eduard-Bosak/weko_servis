@@ -1,6 +1,7 @@
 "use strict";
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwGJVbD34Rkt1uz2x5Nu4riKDNmHTlAGmhbJle0DmGbqwuEsL3S9Ra6qGo23Hi1pBXMyw/exec";
 const HISTORY_KEY = "weko_history";
+const SYNC_QUEUE_KEY = "weko_sync_queue";
 const MAX_HISTORY = 200;
 const partsDB = [
     { name: "АКБ 60V 22AH", price: 24466 },
@@ -90,6 +91,8 @@ function initRefs() {
         clearHistoryBtn: $("clearHistoryBtn"),
         historySearch: $("historySearch"),
         hiddenClipboard: $("hiddenClipboard"),
+        offlineStatus: $("offlineStatus"),
+        networkStability: $("networkStability"),
     };
 }
 function formatPrice(num) {
@@ -97,6 +100,13 @@ function formatPrice(num) {
 }
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = window.setTimeout(() => func.apply(this, args), wait);
+    };
 }
 function getFavorites() {
     try {
@@ -111,15 +121,20 @@ function saveFavorites(favs) {
     syncFavoritesToSheet(favs);
 }
 function syncFavoritesToSheet(favs) {
+    const payload = { action: "saveSettings", key: "favorites", value: JSON.stringify(favs) };
     try {
+        if (!navigator.onLine)
+            throw new Error("Offline");
         fetch(GOOGLE_SHEET_URL, {
             method: "POST",
             mode: "no-cors",
-            body: JSON.stringify({ action: "saveSettings", key: "favorites", value: JSON.stringify(favs) }),
+            body: JSON.stringify(payload),
             headers: { "Content-Type": "text/plain;charset=utf-8" },
         });
     }
-    catch (_a) { }
+    catch (_a) {
+        addToSyncQueue("saveSettings", payload);
+    }
 }
 async function loadFavoritesFromSheet() {
     try {
@@ -156,6 +171,142 @@ function toggleFavorite(partName) {
     saveFavorites(favs);
     return idx < 0;
 }
+function getSyncQueue() {
+    try {
+        return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
+    }
+    catch (_a) {
+        return [];
+    }
+}
+function setSyncQueue(queue) {
+    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+    updateOfflineStatus();
+}
+function addToSyncQueue(action, payload) {
+    const queue = getSyncQueue();
+    if (action === "update" || action === "saveSettings") {
+        const existingIdx = queue.findIndex(q => q.action === action && (action === "saveSettings" ? true : q.payload.id === payload.id));
+        if (existingIdx !== -1) {
+            queue[existingIdx].payload = payload;
+            setSyncQueue(queue);
+            return;
+        }
+    }
+    queue.push({ id: generateId(), action, payload, timestamp: Date.now() });
+    setSyncQueue(queue);
+}
+function updateOfflineStatus() {
+    if (!_refs.offlineStatus)
+        return;
+    const queue = getSyncQueue();
+    if (queue.length > 0) {
+        _refs.offlineStatus.classList.remove("hidden");
+        _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
+        _refs.offlineStatus.title = `Ожидание сети: ${queue.length} зап.`;
+        _refs.offlineStatus.className = "text-amber-500 hint-bounce transition-all duration-300";
+    }
+    else if (!navigator.onLine) {
+        _refs.offlineStatus.classList.remove("hidden");
+        _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-cloud-bolt"></i>';
+        _refs.offlineStatus.title = "Офлайн-режим";
+        _refs.offlineStatus.className = "text-red-400 hint-bounce transition-all duration-300";
+    }
+    else {
+        if (!_refs.offlineStatus.classList.contains("hidden") && _refs.offlineStatus.classList.contains("text-amber-500")) {
+            _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-check-circle"></i>';
+            _refs.offlineStatus.className = "text-emerald-500 transition-all duration-300";
+            setTimeout(() => _refs.offlineStatus.classList.add("hidden"), 2500);
+        }
+        else {
+            _refs.offlineStatus.classList.add("hidden");
+        }
+    }
+}
+function updateNetworkStability() {
+    const el = _refs.networkStability;
+    if (!el)
+        return;
+    if (!navigator.onLine) {
+        el.textContent = "0%";
+        el.className = "text-[10px] sm:text-xs font-bold text-red-500 transition-colors";
+        return;
+    }
+    let stability = 100;
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+        if (conn.rtt !== undefined) {
+            if (conn.rtt <= 50)
+                stability = 100;
+            else if (conn.rtt <= 100)
+                stability = 100 - Math.floor((conn.rtt - 50) / 5);
+            else if (conn.rtt <= 200)
+                stability = 90 - Math.floor((conn.rtt - 100) / 10);
+            else if (conn.rtt <= 500)
+                stability = 80 - Math.floor((conn.rtt - 200) / 10);
+            else
+                stability = Math.max(5, 50 - Math.floor((conn.rtt - 500) / 20));
+        }
+        else if (conn.downlink !== undefined) {
+            if (conn.downlink >= 5)
+                stability = 100;
+            else if (conn.downlink >= 2)
+                stability = 90;
+            else if (conn.downlink >= 1)
+                stability = 70;
+            else if (conn.downlink >= 0.5)
+                stability = 50;
+            else
+                stability = 20;
+        }
+    }
+    el.textContent = `${stability}%`;
+    if (stability >= 80) {
+        el.className = "text-[10px] sm:text-xs font-bold text-emerald-500 transition-colors";
+    }
+    else if (stability >= 40) {
+        el.className = "text-[10px] sm:text-xs font-bold text-amber-500 transition-colors";
+    }
+    else {
+        el.className = "text-[10px] sm:text-xs font-bold text-red-500 transition-colors";
+    }
+}
+let isSyncing = false;
+async function processSyncQueue() {
+    if (!navigator.onLine || isSyncing) {
+        updateOfflineStatus();
+        return;
+    }
+    const queue = getSyncQueue();
+    if (queue.length === 0) {
+        updateOfflineStatus();
+        return;
+    }
+    isSyncing = true;
+    if (_refs.offlineStatus) {
+        _refs.offlineStatus.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i>';
+    }
+    const remainingQueue = [...queue];
+    for (const item of queue) {
+        try {
+            await fetch(GOOGLE_SHEET_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify(item.payload),
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+            });
+            const idx = remainingQueue.findIndex(q => q.id === item.id);
+            if (idx !== -1)
+                remainingQueue.splice(idx, 1);
+        }
+        catch (_a) {
+            break;
+        }
+    }
+    setSyncQueue(remainingQueue);
+    isSyncing = false;
+    updateOfflineStatus();
+}
 function renderParts() {
     const frag = document.createDocumentFragment();
     const favs = getFavorites();
@@ -174,9 +325,6 @@ function renderParts() {
                 <i class="fa-${starActive ? 'solid' : 'regular'} fa-star"></i>
             </button>
         `;
-        const inputEl = label.querySelector("input");
-        if (inputEl)
-            inputEl.addEventListener("change", updateTotals);
         frag.appendChild(label);
     });
     _refs.partsContainer.appendChild(frag);
@@ -420,58 +568,61 @@ async function sendToGoogleSheets() {
     btn.style.opacity = "0.7";
     const data = getInvoiceData();
     const id = generateId();
+    const payload = Object.assign({ action: "create", id }, data);
     try {
+        if (!navigator.onLine)
+            throw new Error("Offline");
         await fetch(GOOGLE_SHEET_URL, {
             method: "POST",
             mode: "no-cors",
-            body: JSON.stringify(Object.assign({ action: "create", id }, data)),
+            body: JSON.stringify(payload),
             headers: { "Content-Type": "text/plain;charset=utf-8" },
         });
-        saveToHistory(Object.assign({ id }, data));
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> Успешно!';
-        btn.style.opacity = "1";
-        btn.className = btn.className
-            .replace("from-indigo-600 to-purple-600", "from-emerald-500 to-emerald-600")
-            .replace("hover:from-indigo-500 hover:to-purple-500", "hover:from-emerald-400 hover:to-emerald-500");
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            btn.className = btn.className
-                .replace("from-emerald-500 to-emerald-600", "from-indigo-600 to-purple-600")
-                .replace("hover:from-emerald-400 hover:to-emerald-500", "hover:from-indigo-500 hover:to-purple-500");
-        }, 2000);
     }
     catch (error) {
-        btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Ошибка!';
-        btn.style.opacity = "1";
-        btn.className = btn.className.replace("from-indigo-600 to-purple-600", "from-red-500 to-red-600");
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            btn.className = btn.className.replace("from-red-500 to-red-600", "from-indigo-600 to-purple-600");
-        }, 3000);
+        addToSyncQueue("create", payload);
     }
+    saveToHistory(Object.assign({ id }, data));
+    const isOfflineSave = !navigator.onLine || getSyncQueue().some(q => q.payload.id === id);
+    btn.innerHTML = isOfflineSave ? '<i class="fa-solid fa-cloud-arrow-up"></i> В очереди!' : '<i class="fa-solid fa-check"></i> Успешно!';
+    btn.style.opacity = "1";
+    btn.className = btn.className
+        .replace("from-indigo-600 to-purple-600", isOfflineSave ? "from-amber-500 to-orange-500" : "from-emerald-500 to-emerald-600")
+        .replace("hover:from-indigo-500 hover:to-purple-500", isOfflineSave ? "hover:from-amber-400 hover:to-orange-400" : "hover:from-emerald-400 hover:to-emerald-500");
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        btn.className = btn.className
+            .replace("from-emerald-500 to-emerald-600", "from-indigo-600 to-purple-600")
+            .replace("from-amber-500 to-orange-500", "from-indigo-600 to-purple-600")
+            .replace("hover:from-emerald-400 hover:to-emerald-500", "hover:from-indigo-500 hover:to-purple-500")
+            .replace("hover:from-amber-400 hover:to-orange-400", "hover:from-indigo-500 hover:to-purple-500");
+    }, 2000);
 }
 async function updateGoogleSheet(entry) {
+    const payload = {
+        action: "update",
+        id: entry.id,
+        client: entry.client,
+        delivery: entry.delivery,
+        repairTotal: entry.repairTotal,
+        total: entry.total,
+        partsList: (entry.selectedParts || []).join(", "),
+    };
     try {
+        if (!navigator.onLine)
+            throw new Error("Offline");
         await fetch(GOOGLE_SHEET_URL, {
             method: "POST",
             mode: "no-cors",
-            body: JSON.stringify({
-                action: "update",
-                id: entry.id,
-                client: entry.client,
-                delivery: entry.delivery,
-                repairTotal: entry.repairTotal,
-                total: entry.total,
-                partsList: (entry.selectedParts || []).join(", "),
-            }),
+            body: JSON.stringify(payload),
             headers: { "Content-Type": "text/plain;charset=utf-8" },
         });
         return true;
     }
     catch (_a) {
-        return false;
+        addToSyncQueue("update", payload);
+        return true;
     }
 }
 function copyToClipboard() {
@@ -939,6 +1090,11 @@ function initEvents() {
             setDateFilter("all");
         }
     });
+    _refs.partsContainer.addEventListener("change", (e) => {
+        if (e.target && e.target.classList.contains("part-checkbox")) {
+            updateTotals();
+        }
+    });
     document.addEventListener("change", (e) => {
         if (e.target && e.target.classList.contains("edit-part-checkbox")) {
             updateEditTotals();
@@ -959,7 +1115,12 @@ function initEvents() {
                 setPartsFilter(partFilter);
         });
     });
-    _refs.clientName.addEventListener("input", showSuggestions);
+    const debouncedFilterParts = debounce(filterParts, 150);
+    const debouncedHistorySearch = debounce(onHistorySearch, 200);
+    _refs.searchInput.addEventListener("input", debouncedFilterParts);
+    _refs.historySearch.addEventListener("input", debouncedHistorySearch);
+    const debouncedShowSuggestions = debounce(showSuggestions, 150);
+    _refs.clientName.addEventListener("input", debouncedShowSuggestions);
     _refs.clientName.addEventListener("focus", showSuggestions);
     _refs.clientName.addEventListener("keydown", handleAcKeydown);
     _refs.clientName.addEventListener("blur", () => {
@@ -977,6 +1138,19 @@ function initEvents() {
             _refs.bikeNumber.blur();
         }
     });
+    window.addEventListener('online', () => {
+        processSyncQueue();
+        updateNetworkStability();
+    });
+    window.addEventListener('offline', () => {
+        updateOfflineStatus();
+        updateNetworkStability();
+    });
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+        conn.addEventListener("change", updateNetworkStability);
+    }
+    setInterval(updateNetworkStability, 3000);
 }
 function initServiceWorker() {
     if ("serviceWorker" in navigator) {
@@ -990,5 +1164,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initEvents();
     initServiceWorker();
     updateFavCount();
+    updateOfflineStatus();
+    updateNetworkStability();
+    processSyncQueue();
     loadFavoritesFromSheet();
 });
