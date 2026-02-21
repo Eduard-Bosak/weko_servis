@@ -1150,7 +1150,7 @@ function initEvents() {
     if (conn) {
         conn.addEventListener("change", updateNetworkStability);
     }
-    setInterval(updateNetworkStability, 3000);
+    setInterval(updateNetworkStability, 1000);
 }
 function initServiceWorker() {
     if ("serviceWorker" in navigator) {
