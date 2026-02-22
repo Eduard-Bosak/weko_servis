@@ -1069,8 +1069,11 @@ function renderHistory(isNew: boolean) {
     if (historyDateFilter === "exact" && historyExactDate) {
       const [y, m, d] = historyExactDate.split('-');
       empty.innerHTML = `
-                <i class="fa-solid fa-calendar-xmark text-xl text-slate-600 mb-2"></i>
-                <p class="text-[11px] text-slate-500 max-w-[200px] mx-auto leading-relaxed">На <b>${d}.${m}.${y}</b> локальных записей не найдено.</p>
+                <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-5 my-2 w-full text-center shadow-inner">
+                    <i class="fa-solid fa-calendar-xmark text-4xl text-indigo-400 mb-3 opacity-80"></i>
+                    <p class="text-sm font-bold text-indigo-300 mb-1.5">Ничего не найдено</p>
+                    <p class="text-xs text-indigo-200/80 leading-relaxed">За <b>${d}.${m}.${y}</b> в данном браузере нет сохранённых генераций.</p>
+                </div>
             `;
     } else if (
       allHistory.length > 0 &&
