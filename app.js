@@ -698,8 +698,8 @@ function getFilteredHistory() {
     let history = getHistory();
     if (historyDateFilter !== "all") {
         if (historyDateFilter === "exact" && historyExactDate) {
-            const picked = new Date(historyExactDate);
-            const dayStart = new Date(picked.getFullYear(), picked.getMonth(), picked.getDate());
+            const [y, m, d] = historyExactDate.split('-');
+            const dayStart = new Date(Number(y), Number(m) - 1, Number(d));
             const dayEnd = new Date(dayStart.getTime());
             dayEnd.setDate(dayEnd.getDate() + 1);
             history = history.filter((e) => {
@@ -787,12 +787,21 @@ function renderCalendar() {
     CAL_DAYS_RU.forEach(d => html += `<span>${d}</span>`);
     html += `</div>`;
     html += `<div class="cal-days">`;
+    const historyDates = new Set();
+    getHistory().forEach((e) => {
+        const t = new Date(e.timestamp);
+        const dateStr = `${t.getFullYear()}-${(t.getMonth() + 1).toString().padStart(2, '0')}-${t.getDate().toString().padStart(2, '0')}`;
+        historyDates.add(dateStr);
+    });
     for (let i = startDow - 1; i >= 0; i--) {
         const day = daysInPrev - i;
         const m = calViewMonth === 0 ? 12 : calViewMonth;
         const y = calViewMonth === 0 ? calViewYear - 1 : calViewYear;
         const dateStr = `${y}-${m.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${day}</button>`;
+        let cls = 'cal-day other-month';
+        if (historyDates.has(dateStr))
+            cls += ' has-records';
+        html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${day}</button>`;
     }
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${calViewYear}-${(calViewMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
@@ -801,6 +810,8 @@ function renderCalendar() {
             cls += ' today';
         if (dateStr === historyExactDate)
             cls += ' selected';
+        if (historyDates.has(dateStr))
+            cls += ' has-records';
         html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
     }
     const totalCells = startDow + daysInMonth;
@@ -810,7 +821,10 @@ function renderCalendar() {
             const m = calViewMonth === 11 ? 1 : calViewMonth + 2;
             const y = calViewMonth === 11 ? calViewYear + 1 : calViewYear;
             const dateStr = `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-            html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
+            let cls = 'cal-day other-month';
+            if (historyDates.has(dateStr))
+                cls += ' has-records';
+            html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
         }
     }
     html += `</div>`;
@@ -850,17 +864,24 @@ function renderHistory(isNew) {
     list.querySelectorAll(".history-item").forEach((el) => el.remove());
     if (filtered.length === 0) {
         empty.classList.remove("hidden");
-        if (allHistory.length > 0 &&
+        if (historyDateFilter === "exact" && historyExactDate) {
+            const [y, m, d] = historyExactDate.split('-');
+            empty.innerHTML = `
+                <i class="fa-solid fa-calendar-xmark text-xl text-slate-600 mb-2"></i>
+                <p class="text-[11px] text-slate-500 max-w-[200px] mx-auto leading-relaxed">На <b>${d}.${m}.${y}</b> локальных записей не найдено.</p>
+            `;
+        }
+        else if (allHistory.length > 0 &&
             (historySearchQuery || historyDateFilter !== "all")) {
             empty.innerHTML = `
                 <i class="fa-solid fa-filter-circle-xmark text-xl text-slate-600 mb-2"></i>
-                <p class="text-xs text-slate-500">Ничего не найдено</p>
+                <p class="text-[11px] text-slate-500">Ничего не найдено</p>
             `;
         }
         else {
             empty.innerHTML = `
                 <i class="fa-solid fa-inbox text-xl text-slate-600 mb-2"></i>
-                <p class="text-xs text-slate-500">Генерации появятся здесь</p>
+                <p class="text-[11px] text-slate-500">Генерации появятся здесь</p>
             `;
         }
         return;

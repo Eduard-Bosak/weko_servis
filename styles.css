@@ -531,6 +531,25 @@ input[type="date"]#historyDatePicker {
   color: white;
 }
 
+/* Indicators for days with records */
+.cal-day.has-records {
+  font-weight: 700;
+}
+.cal-day.has-records::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: #10b981;
+  border-radius: 50%;
+}
+.cal-day.selected.has-records::after {
+  background: white;
+}
+
 /* === Detail Modal === */
 .detail-modal-backdrop {
   position: fixed;

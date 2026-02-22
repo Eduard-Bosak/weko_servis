@@ -869,8 +869,8 @@ function getFilteredHistory() {
   if (historyDateFilter !== "all") {
     if (historyDateFilter === "exact" && historyExactDate) {
       // Exact date — show only records from that specific day
-      const picked = new Date(historyExactDate);
-      const dayStart = new Date(picked.getFullYear(), picked.getMonth(), picked.getDate());
+      const [y, m, d] = historyExactDate.split('-');
+      const dayStart = new Date(Number(y), Number(m) - 1, Number(d));
       const dayEnd = new Date(dayStart.getTime());
       dayEnd.setDate(dayEnd.getDate() + 1);
       history = history.filter((e: HistoryItem) => {
@@ -981,13 +981,22 @@ function renderCalendar() {
   // Day cells
   html += `<div class="cal-days">`;
 
+  const historyDates = new Set<string>();
+  getHistory().forEach((e: HistoryItem) => {
+    const t = new Date(e.timestamp);
+    const dateStr = `${t.getFullYear()}-${(t.getMonth()+1).toString().padStart(2,'0')}-${t.getDate().toString().padStart(2,'0')}`;
+    historyDates.add(dateStr);
+  });
+
   // Previous month trailing days
   for (let i = startDow - 1; i >= 0; i--) {
     const day = daysInPrev - i;
     const m = calViewMonth === 0 ? 12 : calViewMonth;
     const y = calViewMonth === 0 ? calViewYear - 1 : calViewYear;
     const dateStr = `${y}-${m.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
-    html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${day}</button>`;
+    let cls = 'cal-day other-month';
+    if (historyDates.has(dateStr)) cls += ' has-records';
+    html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${day}</button>`;
   }
 
   // Current month days
@@ -996,6 +1005,7 @@ function renderCalendar() {
     let cls = 'cal-day';
     if (dateStr === todayStr) cls += ' today';
     if (dateStr === historyExactDate) cls += ' selected';
+    if (historyDates.has(dateStr)) cls += ' has-records';
     html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
   }
 
@@ -1007,7 +1017,9 @@ function renderCalendar() {
       const m = calViewMonth === 11 ? 1 : calViewMonth + 2;
       const y = calViewMonth === 11 ? calViewYear + 1 : calViewYear;
       const dateStr = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-      html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
+      let cls = 'cal-day other-month';
+      if (historyDates.has(dateStr)) cls += ' has-records';
+      html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
     }
   }
 
@@ -1054,18 +1066,24 @@ function renderHistory(isNew: boolean) {
 
   if (filtered.length === 0) {
     empty.classList.remove("hidden");
-    if (
+    if (historyDateFilter === "exact" && historyExactDate) {
+      const [y, m, d] = historyExactDate.split('-');
+      empty.innerHTML = `
+                <i class="fa-solid fa-calendar-xmark text-xl text-slate-600 mb-2"></i>
+                <p class="text-[11px] text-slate-500 max-w-[200px] mx-auto leading-relaxed">На <b>${d}.${m}.${y}</b> локальных записей не найдено.</p>
+            `;
+    } else if (
       allHistory.length > 0 &&
       (historySearchQuery || historyDateFilter !== "all")
     ) {
       empty.innerHTML = `
                 <i class="fa-solid fa-filter-circle-xmark text-xl text-slate-600 mb-2"></i>
-                <p class="text-xs text-slate-500">Ничего не найдено</p>
+                <p class="text-[11px] text-slate-500">Ничего не найдено</p>
             `;
     } else {
       empty.innerHTML = `
                 <i class="fa-solid fa-inbox text-xl text-slate-600 mb-2"></i>
-                <p class="text-xs text-slate-500">Генерации появятся здесь</p>
+                <p class="text-[11px] text-slate-500">Генерации появятся здесь</p>
             `;
     }
     return;
