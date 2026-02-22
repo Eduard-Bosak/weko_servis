@@ -779,9 +779,9 @@ function renderCalendar() {
     const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
     const daysInPrev = new Date(calViewYear, calViewMonth, 0).getDate();
     let html = `<div class="cal-header">`;
-    html += `<button onclick="calPrevMonth()" aria-label="Предыдущий месяц"><i class="fa-solid fa-chevron-left"></i></button>`;
+    html += `<button onclick="event.stopPropagation(); calPrevMonth()" aria-label="Предыдущий месяц"><i class="fa-solid fa-chevron-left"></i></button>`;
     html += `<span class="cal-title">${CAL_MONTHS_RU[calViewMonth]} ${calViewYear}</span>`;
-    html += `<button onclick="calNextMonth()" aria-label="Следующий месяц"><i class="fa-solid fa-chevron-right"></i></button>`;
+    html += `<button onclick="event.stopPropagation(); calNextMonth()" aria-label="Следующий месяц"><i class="fa-solid fa-chevron-right"></i></button>`;
     html += `</div>`;
     html += `<div class="cal-dow">`;
     CAL_DAYS_RU.forEach(d => html += `<span>${d}</span>`);
@@ -792,7 +792,7 @@ function renderCalendar() {
         const m = calViewMonth === 0 ? 12 : calViewMonth;
         const y = calViewMonth === 0 ? calViewYear - 1 : calViewYear;
         const dateStr = `${y}-${m.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        html += `<button class="cal-day other-month" onclick="calSelectDay('${dateStr}')">${day}</button>`;
+        html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${day}</button>`;
     }
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${calViewYear}-${(calViewMonth + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
@@ -801,7 +801,7 @@ function renderCalendar() {
             cls += ' today';
         if (dateStr === historyExactDate)
             cls += ' selected';
-        html += `<button class="${cls}" onclick="calSelectDay('${dateStr}')">${d}</button>`;
+        html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
     }
     const totalCells = startDow + daysInMonth;
     const remainder = totalCells % 7;
@@ -810,7 +810,7 @@ function renderCalendar() {
             const m = calViewMonth === 11 ? 1 : calViewMonth + 2;
             const y = calViewMonth === 11 ? calViewYear + 1 : calViewYear;
             const dateStr = `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-            html += `<button class="cal-day other-month" onclick="calSelectDay('${dateStr}')">${d}</button>`;
+            html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
         }
     }
     html += `</div>`;
@@ -835,7 +835,7 @@ function calNextMonth() {
 function calSelectDay(dateStr) {
     historyExactDate = dateStr;
     renderCalendar();
-    setDateFilter("exact");
+    renderHistory(false);
 }
 function renderHistory(isNew) {
     const list = _refs.historyList;

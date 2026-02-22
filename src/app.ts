@@ -968,9 +968,9 @@ function renderCalendar() {
 
   // Build header
   let html = `<div class="cal-header">`;
-  html += `<button onclick="calPrevMonth()" aria-label="Предыдущий месяц"><i class="fa-solid fa-chevron-left"></i></button>`;
+  html += `<button onclick="event.stopPropagation(); calPrevMonth()" aria-label="Предыдущий месяц"><i class="fa-solid fa-chevron-left"></i></button>`;
   html += `<span class="cal-title">${CAL_MONTHS_RU[calViewMonth]} ${calViewYear}</span>`;
-  html += `<button onclick="calNextMonth()" aria-label="Следующий месяц"><i class="fa-solid fa-chevron-right"></i></button>`;
+  html += `<button onclick="event.stopPropagation(); calNextMonth()" aria-label="Следующий месяц"><i class="fa-solid fa-chevron-right"></i></button>`;
   html += `</div>`;
 
   // Day-of-week labels
@@ -987,7 +987,7 @@ function renderCalendar() {
     const m = calViewMonth === 0 ? 12 : calViewMonth;
     const y = calViewMonth === 0 ? calViewYear - 1 : calViewYear;
     const dateStr = `${y}-${m.toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
-    html += `<button class="cal-day other-month" onclick="calSelectDay('${dateStr}')">${day}</button>`;
+    html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${day}</button>`;
   }
 
   // Current month days
@@ -996,7 +996,7 @@ function renderCalendar() {
     let cls = 'cal-day';
     if (dateStr === todayStr) cls += ' today';
     if (dateStr === historyExactDate) cls += ' selected';
-    html += `<button class="${cls}" onclick="calSelectDay('${dateStr}')">${d}</button>`;
+    html += `<button class="${cls}" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
   }
 
   // Next month leading days (fill to complete last row)
@@ -1007,7 +1007,7 @@ function renderCalendar() {
       const m = calViewMonth === 11 ? 1 : calViewMonth + 2;
       const y = calViewMonth === 11 ? calViewYear + 1 : calViewYear;
       const dateStr = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-      html += `<button class="cal-day other-month" onclick="calSelectDay('${dateStr}')">${d}</button>`;
+      html += `<button class="cal-day other-month" onclick="event.stopPropagation(); calSelectDay('${dateStr}')">${d}</button>`;
     }
   }
 
@@ -1030,7 +1030,7 @@ function calNextMonth() {
 function calSelectDay(dateStr: string) {
   historyExactDate = dateStr;
   renderCalendar();
-  setDateFilter("exact");
+  renderHistory(false);
 }
 
 // ================================================
