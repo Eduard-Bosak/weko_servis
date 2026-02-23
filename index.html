@@ -158,10 +158,16 @@
                         <p class="text-[10px] sm:text-xs text-slate-400 font-semibold tracking-widest uppercase">Генерация счетов</p>
                     </div>
                 </div>
-                <button onclick="resetForm()" class="btn-press text-xs sm:text-sm font-semibold text-red-500 hover:text-white bg-red-50 hover:bg-red-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5">
-                    <i class="fa-solid fa-arrow-rotate-left text-xs"></i>
-                    <span class="hidden sm:inline">Сброс</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="syncData(true)" class="btn-press text-xs sm:text-sm font-semibold text-indigo-500 hover:text-white bg-indigo-50 hover:bg-indigo-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5" title="Принудительно загрузить новые детали и историю с чужих устройств">
+                        <i id="syncBtnIcon" class="fa-solid fa-cloud-arrow-down text-xs"></i>
+                        <span class="hidden sm:inline">Синхронизировать</span>
+                    </button>
+                    <button onclick="resetForm()" class="btn-press text-xs sm:text-sm font-semibold text-red-500 hover:text-white bg-red-50 hover:bg-red-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrow-rotate-left text-xs"></i>
+                        <span class="hidden sm:inline">Сброс</span>
+                    </button>
+                </div>
             </div>
         </div>
 

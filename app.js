@@ -3,57 +3,53 @@ const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwGJVbD34Rkt1u
 const HISTORY_KEY = "weko_history";
 const SYNC_QUEUE_KEY = "weko_sync_queue";
 const MAX_HISTORY = 200;
-const partsDB = [
-    { name: "АКБ 60V 22AH", price: 24466 },
-    { name: "Зарядное устройство 5A 60V", price: 1282 },
-    { name: "Штырь 27,2 30см", price: 423 },
-    { name: "Держатель телефона без USB", price: 403 },
-    { name: "Кресло Jetson усиленное", price: 1719 },
-    { name: "Провод аккумулятора", price: 265 },
-    { name: "Крыло переднее", price: 423 },
-    { name: "Коннектор АКБ", price: 200 },
-    { name: "Корпус АКБ 21AH", price: 1700 },
-    { name: "Крышка АКБ нижняя", price: 253 },
-    { name: "Провод мотор-колеса R16", price: 636 },
-    { name: "Плата датчика холла", price: 235 },
-    { name: "Варежки", price: 800 },
-    { name: "Задняя подвеска с маятником", price: 1725 },
-    { name: "Рама велосипеда", price: 12829 },
-    { name: "Держатель телефона с USB", price: 805 },
-    { name: "Зарядное устройство 3A 60V", price: 2070 },
-    { name: "Внешний корпус АКБ", price: 575 },
-    { name: "Бортовой комьютер (Дисплей)", price: 1178 },
-    { name: "Поворотники передние", price: 575 },
-    { name: "Крышка металлическая под ноги", price: 426 },
-    { name: "Педаль металлические", price: 368 },
-    { name: "Цепь", price: 157 },
-    { name: "Накладка на цепь (Защита)", price: 397 },
-    { name: "Ротор", price: 5171 },
-    { name: "Диск с магнитами (Статер)", price: 4025 },
-    { name: "Гидравлические тормоза", price: 2530 },
-    { name: "Крепления гидравлики", price: 252 },
-    { name: "Фиксатор шланга гидравлики", price: 133 },
-    { name: "Ось переднего колеса", price: 207 },
-    { name: "Амортизатор задний (609)", price: 609 },
-    { name: "Амортизатор задний (768)", price: 768 },
-    { name: "Передняя фара", price: 1587 },
-    { name: "Подшипник руля", price: 34 },
-    { name: "Руль в сборе", price: 1058 },
-    { name: "Вынос руля", price: 529 },
-    { name: "Руль", price: 725 },
-    { name: "Ручка газа 60V Monster", price: 1125 },
-    { name: "Концевик Jetson", price: 199 },
-    { name: "Ручка тормоза правая", price: 133 },
-    { name: "Ручка тормоза левая", price: 133 },
-    { name: "Клемнный зажим", price: 49 },
-    { name: "Контроллер 2G", price: 4025 },
-    { name: "Трекер 2G", price: 5750 },
-    { name: "АКБ 3,7V", price: 365 },
-    { name: "Зеркала (комплект)", price: 990 },
-    { name: "Подножка", price: 1500 },
-    { name: "Крыло заднее", price: 800 },
-    { name: "Планка АКБ", price: 800 },
-];
+let partsDB = [];
+async function syncData(force = false) {
+    const syncBtnIcon = $("syncBtnIcon");
+    if (syncBtnIcon)
+        syncBtnIcon.classList.add("fa-spin");
+    try {
+        if (!force) {
+            const cachedParts = localStorage.getItem("weko_parts");
+            if (cachedParts) {
+                partsDB = JSON.parse(cachedParts);
+                renderParts();
+            }
+        }
+        if (force || partsDB.length === 0) {
+            const partsRes = await fetch(`${GOOGLE_SHEET_URL}?action=getParts`);
+            const partsData = await partsRes.json();
+            if (partsData.success && partsData.parts) {
+                partsDB = partsData.parts;
+                localStorage.setItem("weko_parts", JSON.stringify(partsDB));
+                renderParts();
+            }
+        }
+        const histRes = await fetch(`${GOOGLE_SHEET_URL}?action=getHistory&limit=100`);
+        const histData = await histRes.json();
+        if (histData.success && histData.history) {
+            const localHistory = getHistory();
+            const globalHistory = histData.history;
+            const mergedMap = new Map();
+            localHistory.forEach(item => mergedMap.set(item.id, item));
+            globalHistory.forEach(item => mergedMap.set(item.id, item));
+            const mergedArray = Array.from(mergedMap.values()).sort((a, b) => {
+                const tA = new Date(a.timestamp).getTime();
+                const tB = new Date(b.timestamp).getTime();
+                return tB - tA;
+            });
+            setHistory(mergedArray.slice(0, MAX_HISTORY));
+            renderHistory(false);
+        }
+    }
+    catch (error) {
+        console.error("Sync Data Error:", error);
+    }
+    finally {
+        if (syncBtnIcon)
+            syncBtnIcon.classList.remove("fa-spin");
+    }
+}
 let currentDetailId = null;
 let currentEditId = null;
 let historyDateFilter = "all";
@@ -1183,7 +1179,6 @@ function initServiceWorker() {
 }
 document.addEventListener("DOMContentLoaded", () => {
     initRefs();
-    renderParts();
     renderHistory(false);
     initEvents();
     initServiceWorker();
@@ -1192,4 +1187,5 @@ document.addEventListener("DOMContentLoaded", () => {
     updateNetworkStability();
     processSyncQueue();
     loadFavoritesFromSheet();
+    syncData(false);
 });

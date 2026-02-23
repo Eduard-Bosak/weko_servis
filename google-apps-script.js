@@ -32,6 +32,7 @@
 const SHEET_INVOICES   = "Счета";
 const SHEET_STATISTICS = "statistics";
 const SHEET_SETTINGS   = "settings";
+const SHEET_PARTS      = "Прайс-лист";
 
 // Заголовки листа Счета
 const INVOICE_HEADERS = [
@@ -112,6 +113,27 @@ function initSheets() {
     settings.setColumnWidth(2, 500);
     settings.setColumnWidth(3, 180);
   }
+
+  // --- Лист "Прайс-лист" ---
+  let parts = ss.getSheetByName(SHEET_PARTS);
+  if (!parts) {
+    parts = ss.insertSheet(SHEET_PARTS);
+  }
+  if (parts.getLastRow() === 0) {
+    parts.appendRow(["Название детали", "Цена"]);
+    parts.getRange(1, 1, 1, 2)
+      .setFontWeight("bold")
+      .setBackground("#e11d48")
+      .setFontColor("#ffffff")
+      .setHorizontalAlignment("center");
+    parts.setFrozenRows(1);
+    parts.setColumnWidth(1, 400);
+    parts.setColumnWidth(2, 120);
+
+    // Добавляем пару демо-строк
+    parts.appendRow(["Тестовая деталь 1", 500]);
+    parts.appendRow(["Тестовая деталь 2", 1200]);
+  }
 }
 
 // ============================================
@@ -149,6 +171,10 @@ function doGet(e) {
       return handleGetSettings();
     } else if (action === "getStats") {
       return handleGetStats();
+    } else if (action === "getParts") {
+      return handleGetParts();
+    } else if (action === "getHistory") {
+      return handleGetHistory(e.parameter.limit);
     }
 
     return jsonResponse({ success: false, error: "Unknown action" });
@@ -433,6 +459,109 @@ function handleGetStats() {
     });
 
   return jsonResponse({ success: true, stats: stats });
+}
+
+// ============================================
+// ПРАЙС-ЛИСТ — Получение (GET)
+// ============================================
+
+function handleGetParts() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_PARTS);
+  if (!sheet) return jsonResponse({ success: true, parts: [] });
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return jsonResponse({ success: true, parts: [] });
+
+  // Берем А и B колонки со 2 строки
+  const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  const parts = [];
+  data.forEach(function(row) {
+    const name = String(row[0]).trim();
+    // Извлекаем только числа из цены (на случай если кто-то написал "500 руб")
+    const priceStr = String(row[1]).replace(/[^0-9.]/g, "");
+    const price = parseInt(priceStr) || 0;
+    
+    if (name) {
+      parts.push({ name: name, price: price });
+    }
+  });
+
+  return jsonResponse({ success: true, parts: parts });
+}
+
+// ============================================
+// ИСТОРИЯ — Получение глобальных счетов (GET)
+// ============================================
+
+function handleGetHistory(limitParam) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_INVOICES);
+  if (!sheet) return jsonResponse({ success: true, history: [] });
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return jsonResponse({ success: true, history: [] });
+
+  let limit = parseInt(limitParam) || 50;
+  if (limit > 200) limit = 200; // Ограничение от DDoS
+
+  // Сколько строк взять с конца
+  const numRows = Math.min(limit, lastRow - 1);
+  const startRow = Math.max(2, lastRow - numRows + 1);
+
+  // A:J (1:10)
+  const data = sheet.getRange(startRow, 1, numRows, 10).getValues();
+  
+  const history = [];
+  
+  // Парсим обратно в JSON структуру (с конца в начало, чтобы новые были сверху)
+  for (let i = data.length - 1; i >= 0; i--) {
+    const row = data[i];
+    const id = row[0];
+    if (!id) continue;
+
+    // Реконструируем ISO таймстэмп для сортировки из DD.MM.YYYY и HH:mm
+    const dateStr = String(row[1]);
+    const timeStr = String(row[2]);
+    let timestamp = new Date().toISOString(); // Фолбэк
+    
+    try {
+      if (dateStr && timeStr) {
+         const dParts = dateStr.split('.');
+         const tParts = timeStr.split(':');
+         if (dParts.length === 3 && tParts.length >= 2) {
+            const d = new Date(
+              parseInt(dParts[2]), 
+              parseInt(dParts[1]) - 1, 
+              parseInt(dParts[0]),
+              parseInt(tParts[0]),
+              parseInt(tParts[1])
+            );
+            timestamp = d.toISOString();
+         }
+      }
+    } catch(e) {}
+
+    const partsStr = String(row[9]);
+    let selectedParts = [];
+    if (partsStr && partsStr !== "Ремонт не требуется") {
+      selectedParts = partsStr.split(",").map(function(s) { return s.trim() }).filter(function(s) { return s !== "" });
+    }
+
+    history.push({
+      id: id,
+      timestamp: timestamp,
+      client: row[3],
+      rentNumber: row[4],
+      bikeNumber: row[5],
+      delivery: Number(row[6]) || 0,
+      repairTotal: Number(row[7]) || 0,
+      total: Number(row[8]) || 0,
+      selectedParts: selectedParts
+    });
+  }
+
+  return jsonResponse({ success: true, history: history });
 }
 
 // ============================================
