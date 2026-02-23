@@ -1177,6 +1177,35 @@ function initServiceWorker() {
         navigator.serviceWorker.register("sw.js").catch(() => { });
     }
 }
+function importLocalParts(event) {
+    const input = event.target;
+    if (!input.files || input.files.length === 0)
+        return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        var _a;
+        try {
+            const content = (_a = e.target) === null || _a === void 0 ? void 0 : _a.result;
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].name === "string" && typeof parsed[0].price === "number") {
+                partsDB = parsed;
+                localStorage.setItem("weko_parts", JSON.stringify(partsDB));
+                renderParts();
+                alert(`Успешно загружено деталей: ${partsDB.length}`);
+            }
+            else {
+                alert("Ошибка формата файла. Ожидается массив объектов [{name: '...', price: ...}]");
+            }
+        }
+        catch (err) {
+            alert("Ошибка чтения файла. Убедитесь, что это корректный JSON.");
+            console.error(err);
+        }
+    };
+    reader.readAsText(file);
+    input.value = "";
+}
 document.addEventListener("DOMContentLoaded", () => {
     initRefs();
     renderHistory(false);

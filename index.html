@@ -159,9 +159,18 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    <!-- Hidden file input for offline import -->
+                    <input type="file" id="offlineImportInput" accept=".json" class="hidden" onchange="importLocalParts(event)">
+                    
+                    <button onclick="document.getElementById('offlineImportInput').click()" class="btn-press text-xs sm:text-sm font-semibold text-sky-500 hover:text-white bg-sky-50 hover:bg-sky-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5" title="Загрузить прайс-лист из файла">
+                        <i class="fa-solid fa-folder-open text-xs"></i>
+                        <span class="hidden sm:inline">Импорт</span>
+                    </button>
+                    
                     <button onclick="syncData(true)" class="btn-press text-xs sm:text-sm font-semibold text-indigo-500 hover:text-white bg-indigo-50 hover:bg-indigo-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5" title="Принудительно загрузить новые детали и историю с чужих устройств">
                         <i id="syncBtnIcon" class="fa-solid fa-cloud-arrow-down text-xs"></i>
-                        <span class="hidden sm:inline">Синхронизировать</span>
+                        <span class="hidden lg:inline">Синхронизировать</span>
+                        <span class="hidden sm:inline lg:hidden">Синхр.</span>
                     </button>
                     <button onclick="resetForm()" class="btn-press text-xs sm:text-sm font-semibold text-red-500 hover:text-white bg-red-50 hover:bg-red-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5">
                         <i class="fa-solid fa-arrow-rotate-left text-xs"></i>

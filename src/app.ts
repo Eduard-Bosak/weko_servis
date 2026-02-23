@@ -1480,6 +1480,42 @@ function initServiceWorker() {
 }
 
 // ================================================
+// OFFLINE IMPORT
+// ================================================
+
+function importLocalParts(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (!input.files || input.files.length === 0) return;
+
+  const file = input.files[0];
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    try {
+      const content = e.target?.result as string;
+      const parsed = JSON.parse(content);
+
+      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].name === "string" && typeof parsed[0].price === "number") {
+        partsDB = parsed as Part[];
+        localStorage.setItem("weko_parts", JSON.stringify(partsDB));
+        renderParts();
+        alert(`Успешно загружено деталей: ${partsDB.length}`);
+      } else {
+        alert("Ошибка формата файла. Ожидается массив объектов [{name: '...', price: ...}]");
+      }
+    } catch (err) {
+      alert("Ошибка чтения файла. Убедитесь, что это корректный JSON.");
+      console.error(err);
+    }
+  };
+
+  reader.readAsText(file);
+  
+  // Очищаем value чтобы можно было выбрать этот же файл снова
+  input.value = "";
+}
+
+// ================================================
 // INIT
 // ================================================
 
