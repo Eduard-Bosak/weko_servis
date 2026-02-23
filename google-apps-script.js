@@ -261,6 +261,7 @@ function updateStatistics() {
   let monthSum = 0;
   let todaySum = 0;
   let totalDelivery = 0;
+  let totalDeliveryCount = 0;
   let totalRepair = 0;
   const partsCount = {};
 
@@ -276,6 +277,7 @@ function updateStatistics() {
 
     totalSum += total;
     totalDelivery += delivery;
+    if (delivery > 0) totalDeliveryCount++;
     totalRepair += repair;
 
     // Парсим дату
@@ -336,6 +338,7 @@ function updateStatistics() {
     ["Средний чек (всего)", formatNum(avgCheck) + " ₽", updated],
     ["Средний чек (месяц)", formatNum(avgMonthCheck) + " ₽", updated],
     ["", "", ""],
+    ["Доставок (штук)", formatNum(totalDeliveryCount) + " шт.", updated],
     ["Доставок всего", formatNum(totalDelivery) + " ₽", updated],
     ["Ремонтов всего", formatNum(totalRepair) + " ₽", updated],
     ["", "", ""],
