@@ -1186,24 +1186,43 @@ function importLocalParts(event) {
     reader.onload = (e) => {
         var _a;
         try {
-            const content = (_a = e.target) === null || _a === void 0 ? void 0 : _a.result;
-            const parsed = JSON.parse(content);
-            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].name === "string" && typeof parsed[0].price === "number") {
-                partsDB = parsed;
+            const data = new Uint8Array((_a = e.target) === null || _a === void 0 ? void 0 : _a.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            if (!json || json.length < 2) {
+                alert("Файл пуст или имеет неверный формат.");
+                return;
+            }
+            const newParts = [];
+            for (let i = 1; i < json.length; i++) {
+                const row = json[i];
+                if (!row || row.length < 2)
+                    continue;
+                const name = String(row[0] || "").trim();
+                const priceStr = String(row[1] || "").replace(/[^0-9.]/g, "");
+                const price = parseInt(priceStr);
+                if (name && !isNaN(price)) {
+                    newParts.push({ name, price });
+                }
+            }
+            if (newParts.length > 0) {
+                partsDB = newParts;
                 localStorage.setItem("weko_parts", JSON.stringify(partsDB));
                 renderParts();
-                alert(`Успешно загружено деталей: ${partsDB.length}`);
+                alert(`Успешно загружено деталей из Excel: ${partsDB.length}`);
             }
             else {
-                alert("Ошибка формата файла. Ожидается массив объектов [{name: '...', price: ...}]");
+                alert("Не удалось найти правильные данные. Убедитесь, что в Колонке 1 - Название, а в Колонке 2 - Цена.");
             }
         }
         catch (err) {
-            alert("Ошибка чтения файла. Убедитесь, что это корректный JSON.");
+            alert("Ошибка чтения Excel файла. Убедитесь, что файл не поврежден.");
             console.error(err);
         }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
     input.value = "";
 }
 document.addEventListener("DOMContentLoaded", () => {

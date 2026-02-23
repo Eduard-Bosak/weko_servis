@@ -19,6 +19,12 @@
     <script>
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
     </script>
+    <!-- SweetAlert2 (optional, if you want nice alerts) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SheetJS for Excel parsing (V9.1) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- App Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="font-sans text-slate-800 p-3 sm:p-5 md:p-6 lg:p-8">
@@ -159,8 +165,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <!-- Hidden file input for offline import -->
-                    <input type="file" id="offlineImportInput" accept=".json" class="hidden" onchange="importLocalParts(event)">
+                    <!-- Hidden file input for offline import (V9.1 Excel) -->
+                    <input type="file" id="offlineImportInput" accept=".xlsx, .xls" class="hidden" onchange="importLocalParts(event)">
                     
                     <button onclick="document.getElementById('offlineImportInput').click()" class="btn-press text-xs sm:text-sm font-semibold text-sky-500 hover:text-white bg-sky-50 hover:bg-sky-500 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-1.5" title="Загрузить прайс-лист из файла">
                         <i class="fa-solid fa-folder-open text-xs"></i>

@@ -1,5 +1,5 @@
 // WEKO Service — Service Worker (Cache-first for static assets)
-const CACHE_NAME = 'weko-v10';
+const CACHE_NAME = 'weko-v11';
 const STATIC_ASSETS = [
     './',
     'index.html',

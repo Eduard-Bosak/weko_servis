@@ -1480,7 +1480,7 @@ function initServiceWorker() {
 }
 
 // ================================================
-// OFFLINE IMPORT
+// OFFLINE IMPORT (V9.1 Excel)
 // ================================================
 
 function importLocalParts(event: Event) {
@@ -1492,24 +1492,54 @@ function importLocalParts(event: Event) {
 
   reader.onload = (e) => {
     try {
-      const content = e.target?.result as string;
-      const parsed = JSON.parse(content);
+      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      // @ts-ignore
+      const workbook = XLSX.read(data, { type: 'array' });
+      
+      // Берем первый лист
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      // Превращаем лист в массив массивов
+      // @ts-ignore
+      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      
+      if (!json || json.length < 2) {
+        alert("Файл пуст или имеет неверный формат.");
+        return;
+      }
 
-      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].name === "string" && typeof parsed[0].price === "number") {
-        partsDB = parsed as Part[];
+      const newParts: Part[] = [];
+      
+      // Начинаем со второй строки (индекс 1), предполагая что первая - это заголовки "Название детали", "Цена"
+      for (let i = 1; i < json.length; i++) {
+        const row = json[i];
+        if (!row || row.length < 2) continue;
+        
+        const name = String(row[0] || "").trim();
+        const priceStr = String(row[1] || "").replace(/[^0-9.]/g, "");
+        const price = parseInt(priceStr);
+
+        if (name && !isNaN(price)) {
+          newParts.push({ name, price });
+        }
+      }
+
+      if (newParts.length > 0) {
+        partsDB = newParts;
         localStorage.setItem("weko_parts", JSON.stringify(partsDB));
         renderParts();
-        alert(`Успешно загружено деталей: ${partsDB.length}`);
+        alert(`Успешно загружено деталей из Excel: ${partsDB.length}`);
       } else {
-        alert("Ошибка формата файла. Ожидается массив объектов [{name: '...', price: ...}]");
+        alert("Не удалось найти правильные данные. Убедитесь, что в Колонке 1 - Название, а в Колонке 2 - Цена.");
       }
     } catch (err) {
-      alert("Ошибка чтения файла. Убедитесь, что это корректный JSON.");
+      alert("Ошибка чтения Excel файла. Убедитесь, что файл не поврежден.");
       console.error(err);
     }
   };
 
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
   
   // Очищаем value чтобы можно было выбрать этот же файл снова
   input.value = "";
