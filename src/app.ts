@@ -65,11 +65,107 @@ interface DOMRefs {
   networkStability: HTMLElement;
 }
 
+const defaultPartsDB: Part[] = [
+  { name: "АКБ 60V 22AH", price: 24466 },
+  { name: "Зарядное устройство 5A 60V", price: 1282 },
+  { name: "Штырь 27,2 30см", price: 423 },
+  { name: "Держатель телефона без USB", price: 403 },
+  { name: "Кресло Jetson усиленное", price: 1719 },
+  { name: "Провод аккумулятора", price: 265 },
+  { name: "Крыло переднее", price: 423 },
+  { name: "Коннектор АКБ", price: 200 },
+  { name: "Корпус АКБ 21AH", price: 1700 },
+  { name: "Крышка АКБ нижняя", price: 253 },
+  { name: "Провод мотор-колеса R16", price: 636 },
+  { name: "Плата датчика холла", price: 235 },
+  { name: "Варежки", price: 800 },
+  { name: "Задняя подвеска с маятником", price: 1725 },
+  { name: "Рама велосипеда", price: 12829 },
+  { name: "Держатель телефона с USB", price: 805 },
+  { name: "Зарядное устройство 3A 60V", price: 2070 },
+  { name: "Внешний корпус АКБ", price: 575 },
+  { name: "Бортовой комьютер (Дисплей)", price: 1178 },
+  { name: "Поворотники передние", price: 575 },
+  { name: "Крышка металлическая под ноги", price: 426 },
+  { name: "Педаль металлические", price: 368 },
+  { name: "Цепь", price: 157 },
+  { name: "Накладка на цепь (Защита)", price: 397 },
+  { name: "Ротор", price: 5171 },
+  { name: "Диск с магнитами (Статер)", price: 4025 },
+  { name: "Гидравлические тормоза", price: 2530 },
+  { name: "Крепления гидравлики", price: 252 },
+  { name: "Фиксатор шланга гидравлики", price: 133 },
+  { name: "Ось переднего колеса", price: 207 },
+  { name: "Амортизатор задний (609)", price: 609 },
+  { name: "Амортизатор задний (768)", price: 768 },
+  { name: "Передняя фара", price: 1587 },
+  { name: "Подшипник руля", price: 34 },
+  { name: "Руль в сборе", price: 1058 },
+  { name: "Вынос руля", price: 529 },
+  { name: "Руль", price: 725 },
+  { name: "Ручка газа 60V Monster", price: 1125 },
+  { name: "Концевик Jetson", price: 199 },
+  { name: "Ручка тормоза правая", price: 133 },
+  { name: "Ручка тормоза левая", price: 133 },
+  { name: "Клемнный зажим", price: 49 },
+  { name: "Контроллер 2G", price: 4025 },
+  { name: "Трекер 2G", price: 5750 },
+  { name: "АКБ 3,7V", price: 365 },
+  { name: "Зеркала (комплект)", price: 990 },
+  { name: "Подножка", price: 1500 },
+  { name: "Крыло заднее", price: 800 },
+  { name: "Планка АКБ", price: 800 },
+];
+
 let partsDB: Part[] = [];
 
 // ================================================
-// GLOBAL SYNC LOGIC (V8)
+// GLOBAL SYNC LOGIC & SMART IMPORT (V9.2)
 // ================================================
+
+// Попросить пользователя выбрать режим обновления прайса
+async function askMergeOrReplace(): Promise<'replace' | 'merge' | 'cancel'> {
+  // @ts-ignore (SweetAlert2 is globally available from CDN)
+  if (typeof Swal === 'undefined') return 'replace'; // Fallback если библа не загрузилась
+  
+  // @ts-ignore
+  const result = await Swal.fire({
+    title: 'Обновление Каталога',
+    text: 'Как вы хотите загрузить новые детали и цены?',
+    icon: 'question',
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: 'Дополнить / Обновить',
+    denyButtonText: 'Заменить полностью',
+    cancelButtonText: 'Отмена',
+    confirmButtonColor: '#4f46e5',
+    denyButtonColor: '#ef4444',
+  });
+
+  if (result.isConfirmed) return 'merge';
+  if (result.isDenied) return 'replace';
+  return 'cancel';
+}
+
+function applyPartsUpdate(newParts: Part[], strategy: 'replace' | 'merge') {
+  if (strategy === 'replace') {
+    partsDB = newParts;
+  } else if (strategy === 'merge') {
+    // Создаем Map: ключ - имя новой детали, чтобы легко обновлять
+    const partsMap = new Map<string, Part>();
+    
+    // Сначала добавляем существующие
+    partsDB.forEach(p => partsMap.set(p.name, p));
+    
+    // Затем накатываем новые (если есть такое же имя - цена обновится, если нет - добавится)
+    newParts.forEach(p => partsMap.set(p.name, p));
+    
+    partsDB = Array.from(partsMap.values());
+  }
+
+  localStorage.setItem("weko_parts", JSON.stringify(partsDB));
+  renderParts();
+}
 
 async function syncData(force: boolean = false) {
   const syncBtnIcon = $("syncBtnIcon");
@@ -82,17 +178,27 @@ async function syncData(force: boolean = false) {
       if (cachedParts) {
         partsDB = JSON.parse(cachedParts);
         renderParts();
+      } else {
+        // Если кэш пуст при первом старте, спасаемся дефолтной базой
+        applyPartsUpdate(defaultPartsDB, 'replace');
       }
     }
 
-    // Если нет закэшированных деталей ИЛИ нажата кнопка "Синхронизировать"
-    if (force || partsDB.length === 0) {
+    // Принудительная синхронизация с облаком (Прайс-лист)
+    if (force) {
       const partsRes = await fetch(`${GOOGLE_SHEET_URL}?action=getParts`);
       const partsData = await partsRes.json();
-      if (partsData.success && partsData.parts) {
-        partsDB = partsData.parts;
-        localStorage.setItem("weko_parts", JSON.stringify(partsDB));
-        renderParts();
+      
+      if (partsData.success && partsData.parts && partsData.parts.length > 0) {
+        const strategy = await askMergeOrReplace();
+        if (strategy !== 'cancel') {
+          applyPartsUpdate(partsData.parts, strategy);
+          // @ts-ignore
+          if (typeof Swal !== 'undefined') Swal.fire('Успех!', 'Прайс-лист из облака загружен.', 'success');
+        }
+      } else {
+        // @ts-ignore
+        if (typeof Swal !== 'undefined') Swal.fire('Ошибка', 'Облачный прайс-лист пуст или недоступен.', 'error');
       }
     }
 
@@ -1480,16 +1586,23 @@ function initServiceWorker() {
 }
 
 // ================================================
-// OFFLINE IMPORT (V9.1 Excel)
+// OFFLINE IMPORT (V9.2 Excel Smart Merge)
 // ================================================
 
-function importLocalParts(event: Event) {
+async function importLocalParts(event: Event) {
   const input = event.target as HTMLInputElement;
   if (!input.files || input.files.length === 0) return;
 
   const file = input.files[0];
-  const reader = new FileReader();
+  
+  // Сразу спрашиваем пользователя, как мерджить
+  const strategy = await askMergeOrReplace();
+  if (strategy === 'cancel') {
+    input.value = "";
+    return;
+  }
 
+  const reader = new FileReader();
   reader.onload = (e) => {
     try {
       const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -1505,13 +1618,14 @@ function importLocalParts(event: Event) {
       const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
       if (!json || json.length < 2) {
-        alert("Файл пуст или имеет неверный формат.");
+        // @ts-ignore
+        if (typeof Swal !== 'undefined') Swal.fire('Ошибка', 'Файл пуст или имеет неверный формат Excel.', 'error');
         return;
       }
 
       const newParts: Part[] = [];
       
-      // Начинаем со второй строки (индекс 1), предполагая что первая - это заголовки "Название детали", "Цена"
+      // Начинаем со второй строки (индекс 1), предполагая что первая - это заголовки
       for (let i = 1; i < json.length; i++) {
         const row = json[i];
         if (!row || row.length < 2) continue;
@@ -1526,22 +1640,21 @@ function importLocalParts(event: Event) {
       }
 
       if (newParts.length > 0) {
-        partsDB = newParts;
-        localStorage.setItem("weko_parts", JSON.stringify(partsDB));
-        renderParts();
-        alert(`Успешно загружено деталей из Excel: ${partsDB.length}`);
+        applyPartsUpdate(newParts, strategy);
+        // @ts-ignore
+        if (typeof Swal !== 'undefined') Swal.fire('Готово!', `Загружено деталей: ${newParts.length}`, 'success');
       } else {
-        alert("Не удалось найти правильные данные. Убедитесь, что в Колонке 1 - Название, а в Колонке 2 - Цена.");
+         // @ts-ignore
+         if (typeof Swal !== 'undefined') Swal.fire('Ошибка', 'Не удалось извлечь детали. Столбец A должен быть текстом (Название), а B - числом (Цена).', 'error');
       }
     } catch (err) {
-      alert("Ошибка чтения Excel файла. Убедитесь, что файл не поврежден.");
+      // @ts-ignore
+      if (typeof Swal !== 'undefined') Swal.fire('Ошибка файлов', 'Excel файл повреждён или не читается.', 'error');
       console.error(err);
     }
   };
 
   reader.readAsArrayBuffer(file);
-  
-  // Очищаем value чтобы можно было выбрать этот же файл снова
   input.value = "";
 }
 
