@@ -1581,6 +1581,16 @@ function initEvents() {
     updateTotals();
   });
   
+  _refs.btnDelivX1.addEventListener("click", (e) => {
+    e.preventDefault();
+    setDeliveryMultiplier(1);
+  });
+
+  _refs.btnDelivX2.addEventListener("click", (e) => {
+    e.preventDefault();
+    setDeliveryMultiplier(2);
+  });
+  
   _refs.customDeliveryPrice.addEventListener("input", handleCustomDeliveryPrice);
 
   // Filter tabs (history)
