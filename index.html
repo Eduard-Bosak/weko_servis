@@ -210,13 +210,34 @@
                     </div>
                 </div>
             </div>
-            <label class="delivery-toggle flex items-center gap-3 p-3 sm:p-4 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50/80 mt-4">
-                <input type="checkbox" id="needDelivery" class="custom-check" checked>
-                <div class="min-w-0">
-                    <div class="font-semibold text-slate-800 text-sm sm:text-base">Платная доставка <span class="text-indigo-500 font-bold">1 800 ₽</span></div>
-                    <div class="text-xs sm:text-sm text-slate-400 truncate">Снимите галочку, если выезд по гарантии</div>
+            <div class="mt-4 border border-slate-200/80 rounded-xl bg-white p-3 sm:p-4 transition-all focus-within:border-indigo-300 hover:bg-slate-50/50">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <!-- Чекбокс и текст -->
+                    <div class="flex items-center gap-3 flex-grow">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="needDelivery" class="custom-check" checked>
+                        </label>
+                        <label for="needDelivery" class="cursor-pointer min-w-0">
+                            <div class="font-semibold text-slate-800 text-sm sm:text-base">Платная доставка <span id="deliverySummaryPrice" class="text-indigo-500 font-bold ml-1">900 ₽</span></div>
+                            <div class="text-[11px] sm:text-xs text-slate-400 truncate">Снимите галочку, если гарантия</div>
+                        </label>
+                    </div>
+                    
+                    <!-- Управление ценой -->
+                    <div id="deliveryControls" class="flex items-center gap-2 pl-[44px] sm:pl-0 transition-opacity duration-300">
+                        <!-- Множитель x1 / x2 -->
+                        <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 cursor-pointer">
+                            <button id="btnDelivX1" class="px-3 py-1 text-xs font-bold rounded-md bg-white text-indigo-600 shadow-sm transition-colors">x1</button>
+                            <button id="btnDelivX2" class="px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-slate-600 transition-colors">x2</button>
+                        </div>
+                        <!-- Переопределение цены -->
+                        <div class="relative w-24">
+                            <input type="number" id="customDeliveryPrice" inputmode="numeric" placeholder="Сумма" class="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 pl-2 pr-6 text-sm text-right font-bold text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all placeholder:text-slate-300 placeholder:font-normal" autocomplete="off">
+                            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold pointer-events-none">₽</span>
+                        </div>
+                    </div>
                 </div>
-            </label>
+            </div>
         </div>
 
         <!-- Parts -->

@@ -162,6 +162,11 @@ function initRefs() {
         searchClearBtn: $("searchClearBtn"),
         noResults: $("noResults"),
         needDelivery: $("needDelivery"),
+        deliverySummaryPrice: $("deliverySummaryPrice"),
+        deliveryControls: $("deliveryControls"),
+        btnDelivX1: $("btnDelivX1"),
+        btnDelivX2: $("btnDelivX2"),
+        customDeliveryPrice: $("customDeliveryPrice"),
         clientName: $("clientName"),
         rentNumber: $("rentNumber"),
         bikeNumber: $("bikeNumber"),
@@ -557,7 +562,18 @@ function handleAcKeydown(e) {
 function updateTotals() {
     const needDelivery = _refs.needDelivery.checked;
     const checkboxes = document.querySelectorAll(".part-checkbox:checked");
-    let delivery = needDelivery ? 1800 : 0;
+    let delivery = 0;
+    if (needDelivery) {
+        const customPriceStr = _refs.customDeliveryPrice.value.trim();
+        if (customPriceStr !== "" && !isNaN(Number(customPriceStr))) {
+            delivery = Number(customPriceStr);
+        }
+        else {
+            delivery = 900 * deliveryMultiplier;
+        }
+    }
+    _refs.deliverySummaryPrice.textContent = delivery > 0 ? `${formatPrice(delivery)} ₽` : "0 ₽";
+    _refs.deliverySummaryPrice.style.opacity = needDelivery ? "1" : "0.5";
     let repair = 0;
     const selectedNames = [];
     checkboxes.forEach((cb) => {
@@ -618,7 +634,16 @@ function getInvoiceData() {
         headerText += ` (${brackets.join(", ")})`;
     const needDelivery = _refs.needDelivery.checked;
     const checkboxes = document.querySelectorAll(".part-checkbox:checked");
-    let deliveryCost = needDelivery ? 1800 : 0;
+    let deliveryCost = 0;
+    if (needDelivery) {
+        const customPriceStr = _refs.customDeliveryPrice.value.trim();
+        if (customPriceStr !== "" && !isNaN(Number(customPriceStr))) {
+            deliveryCost = Number(customPriceStr);
+        }
+        else {
+            deliveryCost = 900 * deliveryMultiplier;
+        }
+    }
     let repairCost = 0;
     const selectedParts = [];
     checkboxes.forEach((cb) => {
@@ -630,7 +655,9 @@ function getInvoiceData() {
     const total = deliveryCost + repairCost;
     const partsString = selectedParts.length > 0 ? selectedParts.join(", ") : "Ремонт не требуется";
     let textToCopy = `${headerText}\n\n`;
-    textToCopy += `Сумма доставки: ${deliveryCost}\n\n`;
+    if (deliveryCost > 0) {
+        textToCopy += `Сумма доставки: ${deliveryCost}\n\n`;
+    }
     if (repairCost > 0)
         textToCopy += `Сумма ремонта: ${repairCost}\n\n`;
     textToCopy += `Итого: ${total}\n\n`;
@@ -1173,6 +1200,23 @@ async function saveEdit() {
         closeEditModal();
     }, 1200);
 }
+let deliveryMultiplier = 1;
+function setDeliveryMultiplier(mult) {
+    deliveryMultiplier = mult;
+    const isX1 = mult === 1;
+    _refs.btnDelivX1.className = isX1
+        ? "px-3 py-1 text-xs font-bold rounded-md bg-white text-indigo-600 shadow-sm transition-all"
+        : "px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-all";
+    _refs.btnDelivX2.className = !isX1
+        ? "px-3 py-1 text-xs font-bold rounded-md bg-white text-indigo-600 shadow-sm transition-all"
+        : "px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-all";
+    _refs.customDeliveryPrice.value = "";
+    updateTotals();
+}
+window.setDeliveryMultiplier = setDeliveryMultiplier;
+function handleCustomDeliveryPrice() {
+    updateTotals();
+}
 function initEvents() {
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
@@ -1215,7 +1259,18 @@ function initEvents() {
             updateEditTotals();
         }
     });
-    _refs.needDelivery.addEventListener("change", updateTotals);
+    _refs.needDelivery.addEventListener("change", () => {
+        if (_refs.needDelivery.checked) {
+            _refs.deliveryControls.style.opacity = "1";
+            _refs.deliveryControls.style.pointerEvents = "auto";
+        }
+        else {
+            _refs.deliveryControls.style.opacity = "0.3";
+            _refs.deliveryControls.style.pointerEvents = "none";
+        }
+        updateTotals();
+    });
+    _refs.customDeliveryPrice.addEventListener("input", handleCustomDeliveryPrice);
     document.querySelectorAll(".filter-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
             const filter = tab.dataset.filter;

@@ -41,6 +41,11 @@ interface DOMRefs {
   searchClearBtn: HTMLElement;
   noResults: HTMLElement;
   needDelivery: HTMLInputElement;
+  deliverySummaryPrice: HTMLElement;
+  deliveryControls: HTMLElement;
+  btnDelivX1: HTMLButtonElement;
+  btnDelivX2: HTMLButtonElement;
+  customDeliveryPrice: HTMLInputElement;
   clientName: HTMLInputElement;
   rentNumber: HTMLInputElement;
   bikeNumber: HTMLInputElement;
@@ -260,6 +265,11 @@ function initRefs() {
     searchClearBtn: $("searchClearBtn"),
     noResults: $("noResults"),
     needDelivery: $("needDelivery") as HTMLInputElement,
+    deliverySummaryPrice: $("deliverySummaryPrice"),
+    deliveryControls: $("deliveryControls"),
+    btnDelivX1: $("btnDelivX1") as HTMLButtonElement,
+    btnDelivX2: $("btnDelivX2") as HTMLButtonElement,
+    customDeliveryPrice: $("customDeliveryPrice") as HTMLInputElement,
     clientName: $("clientName") as HTMLInputElement,
     rentNumber: $("rentNumber") as HTMLInputElement,
     bikeNumber: $("bikeNumber") as HTMLInputElement,
@@ -689,7 +699,21 @@ function updateTotals() {
   const needDelivery = _refs.needDelivery.checked;
   const checkboxes = document.querySelectorAll(".part-checkbox:checked") as NodeListOf<HTMLInputElement>;
 
-  let delivery = needDelivery ? 1800 : 0;
+  // Delivery calc
+  let delivery = 0;
+  if (needDelivery) {
+      const customPriceStr = _refs.customDeliveryPrice.value.trim();
+      if (customPriceStr !== "" && !isNaN(Number(customPriceStr))) {
+          delivery = Number(customPriceStr);
+      } else {
+          delivery = 900 * deliveryMultiplier;
+      }
+  }
+
+  // Update summary label near checkbox
+  _refs.deliverySummaryPrice.textContent = delivery > 0 ? `${formatPrice(delivery)} ₽` : "0 ₽";
+  _refs.deliverySummaryPrice.style.opacity = needDelivery ? "1" : "0.5";
+
   let repair = 0;
   const selectedNames: string[] = [];
   checkboxes.forEach((cb) => {
@@ -771,7 +795,16 @@ function getInvoiceData(): Omit<HistoryItem, "id" | "timestamp"> {
   const needDelivery = _refs.needDelivery.checked;
   const checkboxes = document.querySelectorAll(".part-checkbox:checked") as NodeListOf<HTMLInputElement>;
 
-  let deliveryCost = needDelivery ? 1800 : 0;
+  let deliveryCost = 0;
+  if (needDelivery) {
+      const customPriceStr = _refs.customDeliveryPrice.value.trim();
+      if (customPriceStr !== "" && !isNaN(Number(customPriceStr))) {
+          deliveryCost = Number(customPriceStr);
+      } else {
+          deliveryCost = 900 * deliveryMultiplier;
+      }
+  }
+
   let repairCost = 0;
   const selectedParts: string[] = [];
   checkboxes.forEach((cb) => {
@@ -785,7 +818,9 @@ function getInvoiceData(): Omit<HistoryItem, "id" | "timestamp"> {
     selectedParts.length > 0 ? selectedParts.join(", ") : "Ремонт не требуется";
 
   let textToCopy = `${headerText}\n\n`;
-  textToCopy += `Сумма доставки: ${deliveryCost}\n\n`;
+  if (deliveryCost > 0) {
+      textToCopy += `Сумма доставки: ${deliveryCost}\n\n`;
+  }
   if (repairCost > 0) textToCopy += `Сумма ремонта: ${repairCost}\n\n`;
   textToCopy += `Итого: ${total}\n\n`;
   const tags = [];
@@ -1451,6 +1486,35 @@ async function saveEdit() {
 }
 
 // ================================================
+// DELIVERY OPTIONS
+// ================================================
+
+let deliveryMultiplier = 1;
+
+function setDeliveryMultiplier(mult: number) {
+    deliveryMultiplier = mult;
+    
+    const isX1 = mult === 1;
+    _refs.btnDelivX1.className = isX1 
+        ? "px-3 py-1 text-xs font-bold rounded-md bg-white text-indigo-600 shadow-sm transition-all"
+        : "px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-all";
+        
+    _refs.btnDelivX2.className = !isX1
+        ? "px-3 py-1 text-xs font-bold rounded-md bg-white text-indigo-600 shadow-sm transition-all"
+        : "px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-all";
+
+    _refs.customDeliveryPrice.value = ""; // clear custom if multiplier clicked
+    updateTotals();
+}
+
+// Make globally available for inline onclick attributes if any exist
+(window as any).setDeliveryMultiplier = setDeliveryMultiplier;
+
+function handleCustomDeliveryPrice() {
+    updateTotals();
+}
+
+// ================================================
 // KEYBOARD & GLOBAL EVENTS
 // ================================================
 
@@ -1505,8 +1569,19 @@ function initEvents() {
     }
   });
 
-  // Delivery checkbox
-  _refs.needDelivery.addEventListener("change", updateTotals);
+  // Delivery checkbox & custom price
+  _refs.needDelivery.addEventListener("change", () => {
+    if (_refs.needDelivery.checked) {
+        _refs.deliveryControls.style.opacity = "1";
+        _refs.deliveryControls.style.pointerEvents = "auto";
+    } else {
+        _refs.deliveryControls.style.opacity = "0.3";
+        _refs.deliveryControls.style.pointerEvents = "none";
+    }
+    updateTotals();
+  });
+  
+  _refs.customDeliveryPrice.addEventListener("input", handleCustomDeliveryPrice);
 
   // Filter tabs (history)
   document.querySelectorAll(".filter-tab").forEach((tab) => {
