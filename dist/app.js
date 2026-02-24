@@ -614,11 +614,13 @@ function resetForm() {
     _refs.bikeNumber.value = "";
     _refs.searchInput.value = "";
     _refs.needDelivery.checked = true;
+    _refs.deliveryControls.style.opacity = "1";
+    _refs.deliveryControls.style.pointerEvents = "auto";
     document
         .querySelectorAll(".part-checkbox")
         .forEach((cb) => (cb.checked = false));
     filterParts();
-    updateTotals();
+    setDeliveryMultiplier(1);
 }
 function getInvoiceData() {
     const nameRaw = _refs.clientName.value.trim();

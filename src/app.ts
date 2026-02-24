@@ -773,12 +773,17 @@ function resetForm() {
   _refs.rentNumber.value = "";
   _refs.bikeNumber.value = "";
   _refs.searchInput.value = "";
+  
   _refs.needDelivery.checked = true;
+  _refs.deliveryControls.style.opacity = "1";
+  _refs.deliveryControls.style.pointerEvents = "auto";
+  
   document
     .querySelectorAll(".part-checkbox")
     .forEach((cb) => ((cb as HTMLInputElement).checked = false));
+    
   filterParts();
-  updateTotals();
+  setDeliveryMultiplier(1); // Also updates totals and clears custom price
 }
 
 function getInvoiceData(): Omit<HistoryItem, "id" | "timestamp"> {
