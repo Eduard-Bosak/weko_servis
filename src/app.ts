@@ -1,6 +1,7 @@
 /* ================================================
    WEKO Service Portal — Application Logic
    ================================================ */
+console.log("APP.TS IS EXECUTING!");
 
 // === CONFIG ===
 const GOOGLE_SHEET_URL =
@@ -152,24 +153,24 @@ async function askMergeOrReplace(): Promise<'replace' | 'merge' | 'cancel'> {
   return 'cancel';
 }
 
-function applyPartsUpdate(newParts: Part[], strategy: 'replace' | 'merge') {
+function applyPartsUpdate(newParts: Part[], strategy: 'merge' | 'replace') {
   if (strategy === 'replace') {
     partsDB = newParts;
-  } else if (strategy === 'merge') {
-    // Создаем Map: ключ - имя новой детали, чтобы легко обновлять
-    const partsMap = new Map<string, Part>();
+  } else {
+    // merge
+    const current = partsDB || [];
+    const mergedMap = new Map<string, number>();
+    // Store existing
+    current.forEach(p => mergedMap.set(p.name, p.price));
+    // Overwrite/Add new
+    newParts.forEach(p => mergedMap.set(p.name, p.price));
     
-    // Сначала добавляем существующие
-    partsDB.forEach(p => partsMap.set(p.name, p));
-    
-    // Затем накатываем новые (если есть такое же имя - цена обновится, если нет - добавится)
-    newParts.forEach(p => partsMap.set(p.name, p));
-    
-    partsDB = Array.from(partsMap.values());
+    partsDB = Array.from(mergedMap.entries()).map(([name, price]) => ({ name, price }));
   }
-
+  
   localStorage.setItem("weko_parts", JSON.stringify(partsDB));
   renderParts();
+  filterParts();
 }
 
 async function syncData(force: boolean = false) {
@@ -1761,7 +1762,10 @@ document.addEventListener("DOMContentLoaded", () => {
   updateOfflineStatus();
   updateNetworkStability();
   processSyncQueue();
-  loadFavoritesFromSheet(); // Sync favorites from Google Sheets
+  // Initialize UI state
+  _refs.deliveryControls.style.opacity = _refs.needDelivery.checked ? "1" : "0.3";
+  _refs.deliveryControls.style.pointerEvents = _refs.needDelivery.checked ? "auto" : "none";
+  updateTotals();
   
   // V8 Запуск синхронизации
   syncData(false);

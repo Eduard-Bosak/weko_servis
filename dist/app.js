@@ -1,4 +1,5 @@
 "use strict";
+console.log("APP.TS IS EXECUTING!");
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz4KfTxylQYTiVnUFRYbFjwv4Nlc5nGHGBT6AC0XAEpXcXoRD3Avf6M-qAUueoP8CLwlQ/exec";
 const HISTORY_KEY = "weko_history";
 const SYNC_QUEUE_KEY = "weko_sync_queue";
@@ -80,14 +81,16 @@ function applyPartsUpdate(newParts, strategy) {
     if (strategy === 'replace') {
         partsDB = newParts;
     }
-    else if (strategy === 'merge') {
-        const partsMap = new Map();
-        partsDB.forEach(p => partsMap.set(p.name, p));
-        newParts.forEach(p => partsMap.set(p.name, p));
-        partsDB = Array.from(partsMap.values());
+    else {
+        const current = partsDB || [];
+        const mergedMap = new Map();
+        current.forEach(p => mergedMap.set(p.name, p.price));
+        newParts.forEach(p => mergedMap.set(p.name, p.price));
+        partsDB = Array.from(mergedMap.entries()).map(([name, price]) => ({ name, price }));
     }
     localStorage.setItem("weko_parts", JSON.stringify(partsDB));
     renderParts();
+    filterParts();
 }
 async function syncData(force = false) {
     const syncBtnIcon = $("syncBtnIcon");
@@ -1401,6 +1404,8 @@ document.addEventListener("DOMContentLoaded", () => {
     updateOfflineStatus();
     updateNetworkStability();
     processSyncQueue();
-    loadFavoritesFromSheet();
+    _refs.deliveryControls.style.opacity = _refs.needDelivery.checked ? "1" : "0.3";
+    _refs.deliveryControls.style.pointerEvents = _refs.needDelivery.checked ? "auto" : "none";
+    updateTotals();
     syncData(false);
 });
