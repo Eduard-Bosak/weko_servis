@@ -1,5 +1,5 @@
 "use strict";
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwGJVbD34Rkt1uz2x5Nu4riKDNmHTlAGmhbJle0DmGbqwuEsL3S9Ra6qGo23Hi1pBXMyw/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxupdTS_ds3HlbNQ5to9WK70gDzx_qQ-sZRJjhrUww1Il8MTDQIoVwTj-v61U_P3vuuNg/exec";
 const HISTORY_KEY = "weko_history";
 const SYNC_QUEUE_KEY = "weko_sync_queue";
 const MAX_HISTORY = 200;
