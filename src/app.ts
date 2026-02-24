@@ -4,7 +4,7 @@
 
 // === CONFIG ===
 const GOOGLE_SHEET_URL =
-  "https://script.google.com/macros/s/AKfycbxupdTS_ds3HlbNQ5to9WK70gDzx_qQ-sZRJjhrUww1Il8MTDQIoVwTj-v61U_P3vuuNg/exec";
+  "https://script.google.com/macros/s/AKfycbz4KfTxylQYTiVnUFRYbFjwv4Nlc5nGHGBT6AC0XAEpXcXoRD3Avf6M-qAUueoP8CLwlQ/exec";
 const HISTORY_KEY = "weko_history";
 const SYNC_QUEUE_KEY = "weko_sync_queue";
 const MAX_HISTORY = 200;

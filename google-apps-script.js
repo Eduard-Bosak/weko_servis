@@ -510,7 +510,7 @@ function handleGetHistory(limitParam) {
   const startRow = Math.max(2, lastRow - numRows + 1);
 
   // A:J (1:10)
-  const data = sheet.getRange(startRow, 1, numRows, 10).getValues();
+  const data = sheet.getRange(startRow, 1, numRows, 10).getDisplayValues();
   
   const history = [];
   
